@@ -144,65 +144,50 @@ export async function POST(request: Request) {
       partner_type: input.partnerType,
     };
 
-    // Password is never logged or returned
-    const { data: signedUp, error: signUpError } = await supabase.auth.signUp({
+    let userId: string | undefined;
+    let needsEmailConfirmation = false;
+
+    const { data: created, error: createErr } = await admin.auth.admin.createUser({
       email,
       password: input.password,
-      options: {
-        emailRedirectTo: `${origin}/auth/callback?next=/pending`,
-        data: userMetadata,
-      },
+      email_confirm: true,
+      user_metadata: userMetadata,
     });
 
-    let userId = signedUp.user?.id;
-    let needsEmailConfirmation = !signedUp.session;
-
-    if (signUpError || !userId) {
-      const msg = (signUpError?.message ?? "").toLowerCase();
-      if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
+    if (created?.user && !createErr) {
+      userId = created.user.id;
+    } else {
+      const createMsg = (createErr?.message ?? "").toLowerCase();
+      if (createMsg.includes("already") || createMsg.includes("registered") || createMsg.includes("exists")) {
         return safeClientError("A user with this email is already registered", 409);
       }
 
-      const emailDeliveryBlocked =
-        msg.includes("rate limit") ||
-        msg.includes("over_email_send_rate_limit") ||
-        msg.includes("error sending confirmation") ||
-        msg.includes("error sending recovery");
+      const { data: signedUp, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password: input.password,
+        options: {
+          emailRedirectTo: `${origin}/auth/callback?next=/pending`,
+          data: userMetadata,
+        },
+      });
 
-      if (!emailDeliveryBlocked && signUpError) {
+      userId = signedUp.user?.id;
+      needsEmailConfirmation = !signedUp.session;
+
+      if (userId) {
+        const identities = signedUp.user?.identities ?? [];
+        if (Array.isArray(identities) && identities.length === 0) {
+          return safeClientError("A user with this email is already registered", 409);
+        }
+      } else if (signUpError) {
+        const msg = signUpError.message.toLowerCase();
+        if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
+          return safeClientError("A user with this email is already registered", 409);
+        }
         return safeClientError(
           toUserMessage(signUpError.message, "Could not create account"),
           400
         );
-      }
-
-      // Public signUp is blocked by Supabase email quota on free/shared SMTP.
-      // Create the partner via service role so the application still lands.
-      const { data: created, error: createErr } = await admin.auth.admin.createUser({
-        email,
-        password: input.password,
-        email_confirm: true,
-        user_metadata: userMetadata,
-      });
-
-      if (createErr || !created.user) {
-        const createMsg = (createErr?.message ?? "").toLowerCase();
-        if (createMsg.includes("already") || createMsg.includes("registered") || createMsg.includes("exists")) {
-          return safeClientError("A user with this email is already registered", 409);
-        }
-        return safeClientError(
-          toUserMessage(createErr?.message ?? "Could not create account", "Could not create account"),
-          400
-        );
-      }
-
-      userId = created.user.id;
-      needsEmailConfirmation = false;
-    } else {
-      // Supabase may return a user without identities when email already exists (anti-enumeration)
-      const identities = signedUp.user?.identities ?? [];
-      if (Array.isArray(identities) && identities.length === 0) {
-        return safeClientError("A user with this email is already registered", 409);
       }
     }
 

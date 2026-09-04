@@ -13,15 +13,17 @@ export const partnerRegisterSchema = z
       (v) => (typeof v === "string" ? v.trim() : v),
       z.string().max(160, "Name is too long").optional().nullable()
     ),
-    telegram: z
-      .string()
-      .trim()
-      .min(2, "Enter your Telegram")
-      .max(64, "Telegram is too long")
-      .regex(
-        /^(?:@)?[A-Za-z0-9_]{4,32}$|^(?:https?:\/\/)?(?:t\.me|telegram\.me)\/[A-Za-z0-9_]{4,32}\/?$/i,
-        "Enter @username or t.me/username"
-      ),
+    telegram: z.preprocess(
+      (v) => (typeof v === "string" ? v.trim().replace(/\s+/g, "") : v),
+      z
+        .string()
+        .min(2, "Enter your Telegram")
+        .max(64, "Telegram is too long")
+        .regex(
+          /^(?:@)?[A-Za-z0-9_]{4,32}$|^(?:https?:\/\/)?(?:t\.me|telegram\.me)\/[A-Za-z0-9_]{4,32}\/?$/i,
+          "Enter @username or t.me/username"
+        )
+    ),
     email: z
       .string()
       .trim()

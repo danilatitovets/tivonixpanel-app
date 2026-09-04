@@ -7,6 +7,12 @@ const EXACT_MESSAGES: Record<string, string> = {
   "Password should be at least 6 characters": "Пароль слишком короткий — минимум 6 символов",
   "Unable to validate email address: invalid format": "Некорректный формат email",
   "Email rate limit exceeded": "Слишком много попыток. Подождите и попробуйте снова",
+  "A user with this email is already registered": "Пользователь с таким email уже зарегистрирован",
+  "Could not create account": "Не удалось создать аккаунт",
+  "Could not save application": "Не удалось сохранить заявку",
+  "Could not save application. Please try again": "Не удалось сохранить заявку. Попробуйте ещё раз",
+  "Could not submit application": "Не удалось отправить заявку",
+  "Could not load application status": "Не удалось загрузить статус заявки",
   "For security purposes, you can only request this once every 60 seconds":
     "Подождите минуту перед повторной попыткой",
   Unauthorized: "Войдите в аккаунт",
@@ -49,7 +55,7 @@ const PARTIAL_PATTERNS: Array<[RegExp, string]> = [
   [/email not confirmed/i, "Подтвердите email перед входом"],
   [/jwt expired|session expired|refresh token/i, "Сессия истекла — войдите снова"],
   [/network|failed to fetch|fetch failed/i, "Проблема с интернетом. Проверьте соединение"],
-  [/duplicate key|already exists/i, "Такая запись уже существует"],
+  [/duplicate key|already exists|already registered/i, "Пользователь с таким email уже зарегистрирован"],
   [/row-level security|permission denied/i, "Нет доступа к этой операции"],
   [/email address .* is invalid/i, "Некорректный email"],
   [/invalid email/i, "Некорректный email"],
@@ -112,7 +118,8 @@ function translateRawMessage(message: string): string {
     if (pattern.test(trimmed)) return ru;
   }
 
-  if (/^[a-z][a-z0-9_ .-]*$/i.test(trimmed) && /[a-z]/i.test(trimmed)) {
+  // Hide raw engine codes like signup_disabled / invalid_grant, not full sentences.
+  if (/^[a-z][a-z0-9_]+$/i.test(trimmed)) {
     return "Не удалось выполнить действие. Попробуйте ещё раз";
   }
 

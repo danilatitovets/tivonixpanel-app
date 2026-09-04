@@ -7,6 +7,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowRight, Check, X } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { toUserMessage } from "@/lib/errors";
 import type { PartnerType } from "@/lib/types";
@@ -109,7 +110,7 @@ function RegisterFormInner() {
   const [done, setDone] = useState<"pending" | "confirm_email" | null>(null);
 
   const [mounted, setMounted] = useState(false);
-  const modalOpen = partnerType !== null && done !== "confirm_email";
+  const modalOpen = partnerType !== null && done === null;
 
   useEffect(() => {
     setMounted(true);
@@ -219,18 +220,52 @@ function RegisterFormInner() {
         throw new Error(json.error ?? "Could not submit application");
       }
 
-      if (json.data?.needsEmailConfirmation) {
-        setDone("confirm_email");
-      } else {
-        setDone("pending");
-        router.push("/pending");
-        router.refresh();
+      let signedIn = false;
+      try {
+        const supabase = createClient();
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: form.email.trim(),
+          password: form.password,
+        });
+        signedIn = !signInError;
+      } catch {
+        signedIn = false;
       }
+
+      if (!signedIn && json.data?.needsEmailConfirmation) {
+        setDone("confirm_email");
+        return;
+      }
+
+      setDone("pending");
+      router.push("/pending");
+      router.refresh();
     } catch (err) {
       setError(toUserMessage(err, "Could not submit application"));
     } finally {
       setLoading(false);
     }
+  }
+
+  if (done === "pending") {
+    return (
+      <div className="mx-auto w-full max-w-lg rounded-[15px] bg-[var(--color-paper-white)] p-8 text-center shadow-[var(--shadow-subtle)]">
+        <div className="mx-auto mb-5 flex size-11 items-center justify-center rounded-[7.5px] bg-[var(--color-fog-gray)]">
+          <Check className="size-5 text-[var(--color-sunrise-coral)]" strokeWidth={2} />
+        </div>
+        <h2 className="text-[22px] font-normal leading-[1.25] tracking-[-0.012em] text-[var(--color-carbon-black)]">
+          Application submitted
+        </h2>
+        <p className="mt-3 text-[15px] leading-[1.5] tracking-[-0.005em] text-[var(--color-zinc-gray)]">
+          We will review your details and contact you on Telegram. After approval, you will get
+          access to the TIVONIX partner panel.
+        </p>
+        <Link href="/pending" className={cn(authPrimaryBtnClass, "mt-7")}>
+          View status
+          <ArrowRight className="size-4" strokeWidth={2} />
+        </Link>
+      </div>
+    );
   }
 
   if (done === "confirm_email") {
