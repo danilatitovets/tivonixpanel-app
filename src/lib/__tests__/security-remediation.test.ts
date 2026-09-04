@@ -84,6 +84,17 @@ describe("role checks", () => {
     assert.equal(canAccessByRole("partner", "settings"), false);
   });
 
+  it("resource nav follows role even if status is still pending", () => {
+    const pending = fakeUser("partner");
+    pending.status = "pending";
+    assert.equal(canAccessResource(pending, "leads"), true);
+    assert.equal(canAccessResource(pending, "prospecting"), true);
+    const placeholder = fakeUser("partner");
+    placeholder.id = "";
+    placeholder.status = "inactive";
+    assert.equal(canAccessResource(placeholder, "leads"), false);
+  });
+
   it("admin has privileged actions", () => {
     const admin = fakeUser("admin");
     assert.equal(isAdmin(admin), true);

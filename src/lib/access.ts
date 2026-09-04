@@ -47,7 +47,7 @@ export function canUserAccess(user: User | null, action: AccessAction): boolean 
 }
 
 export function canAccessResource(user: User | null, resource: AccessResource): boolean {
-  if (!user || user.status !== "active") return false;
+  if (!user?.id) return false;
   return RESOURCE_ACCESS[user.role].includes(resource);
 }
 

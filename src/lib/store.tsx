@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -228,6 +229,10 @@ interface AppContextValue {
   isBootstrapping: boolean;
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -240,12 +245,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [authSession, setAuthSession] = useState<AuthSessionUser | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [isBootstrapping, setIsBootstrapping] = useState(() => !demo);
+  const sessionLoadedRef = useRef(false);
 
   const refreshFromServer = useCallback(async () => {
-    const [me, payload] = await Promise.all([loadAuthMe(), loadBootstrap()]);
+    const me = await loadAuthMe();
     setAuthSession(me);
-    setData(payload.data);
     setCurrentUserIdState(me.profileId);
+    const payload = await loadBootstrap();
+    setData(payload.data);
   }, []);
 
   useEffect(() => {
@@ -261,22 +268,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     if (isPublicAuthSurface(pathname)) {
+      sessionLoadedRef.current = false;
       queueMicrotask(() => setIsBootstrapping(false));
       return;
     }
 
+    if (sessionLoadedRef.current) return;
+
     let cancelled = false;
     (async () => {
       try {
-        const [me, payload] = await Promise.all([loadAuthMe(), loadBootstrap()]);
+        const me = await loadAuthMe();
         if (cancelled) return;
         setAuthSession(me);
-        setData(payload.data);
         setCurrentUserIdState(me.profileId);
-      } catch {
-        /* bootstrap errors surface via empty state / toasts elsewhere */
+
+        try {
+          const payload = await loadBootstrap();
+          if (cancelled) return;
+          setData(payload.data);
+        } catch (bootstrapErr) {
+          console.error("[crm] bootstrap failed, retrying", bootstrapErr);
+          try {
+            await sleep(900);
+            if (cancelled) return;
+            const payload = await loadBootstrap();
+            if (cancelled) return;
+            setData(payload.data);
+          } catch (retryErr) {
+            console.error("[crm] bootstrap retry failed", retryErr);
+          }
+        }
+      } catch (err) {
+        console.error("[crm] session bootstrap failed", err);
       } finally {
-        if (!cancelled) setIsBootstrapping(false);
+        if (!cancelled) {
+          sessionLoadedRef.current = true;
+          setIsBootstrapping(false);
+        }
       }
     })();
 
@@ -332,7 +361,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (demo) {
       return data.users.find((u) => u.id === currentUserId) ?? data.users[0] ?? PLACEHOLDER_USER;
     }
-    if (isBootstrapping || !authSession) return PLACEHOLDER_USER;
+    if (!authSession) return PLACEHOLDER_USER;
 
     const fromData = data.users.find((u) => u.id === authSession.profileId);
     return {
@@ -350,7 +379,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       assignedManagerId: authSession.assignedManagerId ?? fromData?.assignedManagerId ?? null,
       createdAt: fromData?.createdAt ?? "",
     };
-  }, [data.users, currentUserId, isBootstrapping, authSession, demo]);
+  }, [data.users, currentUserId, authSession, demo]);
 
   const addLead = useCallback(
     async (input: Omit<Lead, "id" | "createdAt" | "updatedAt">) => {

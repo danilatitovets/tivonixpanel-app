@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { CalendarDays } from "lucide-react";
 import { toUserMessage } from "@/lib/errors";
 import { DateFilterField } from "@/components/ui/date-picker-modal";
+import { useApp } from "@/lib/store";
 import {
   LegalDocumentModal,
   ONBOARDING_CONSENT_DOCS,
@@ -16,6 +17,7 @@ const inputClass =
 
 export default function LegalOnboardingPage() {
   const router = useRouter();
+  const { refreshFromServer } = useApp();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dateOfBirth, setDateOfBirth] = useState("");
@@ -106,6 +108,11 @@ export default function LegalOnboardingPage() {
     }
 
     await fetch("/api/auth/me");
+    try {
+      await refreshFromServer();
+    } catch {
+      /* dashboard will retry */
+    }
     router.push("/dashboard");
   }
 

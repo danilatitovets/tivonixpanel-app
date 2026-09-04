@@ -35,10 +35,9 @@ async function send(url: string, init?: RequestInit): Promise<Response> {
 }
 
 export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const method = (init?.method ?? "GET").toUpperCase();
   let res = await send(url, init);
 
-  if (!res.ok && [429, 502, 503].includes(res.status) && method !== "GET" && method !== "HEAD") {
+  if (!res.ok && [429, 502, 503].includes(res.status)) {
     await sleep(retryAfterMs(res));
     res = await send(url, init);
   }

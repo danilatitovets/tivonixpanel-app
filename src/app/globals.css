@@ -231,6 +231,8 @@
 
 /* Closed / leftover overlays must never eat clicks on the panel. */
 [data-slot="dialog-overlay"]:not([data-open]),
-[data-slot="sheet-overlay"]:not([data-open]) {
+[data-slot="sheet-overlay"]:not([data-open]),
+[data-slot="dialog-content"]:not([data-open]),
+[data-slot="sheet-content"]:not([data-open]) {
   pointer-events: none !important;
 }

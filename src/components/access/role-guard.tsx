@@ -25,16 +25,17 @@ export function RoleGuard({
   const isBootstrapping = useIsBootstrapping();
   const router = useRouter();
 
+  const sessionReady = !isBootstrapping && Boolean(user.id);
   const allowed =
     (action ? canUserAccess(user, action) : true) &&
     (resource ? canAccessResource(user, resource) : true);
 
   useEffect(() => {
-    if (isBootstrapping) return;
+    if (!sessionReady) return;
     if (!allowed && redirectTo) router.replace(redirectTo);
-  }, [allowed, redirectTo, router, isBootstrapping]);
+  }, [allowed, redirectTo, router, sessionReady]);
 
-  if (isBootstrapping) return <>{children}</>;
+  if (!sessionReady) return <>{children}</>;
   if (!allowed) return fallback ?? null;
   return <>{children}</>;
 }
