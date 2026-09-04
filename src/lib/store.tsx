@@ -233,6 +233,26 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** Wait while Render cold-starts the API (free plan spin-up). */
+async function waitForApiReady(isCancelled: () => boolean): Promise<boolean> {
+  for (let attempt = 1; attempt <= 25; attempt++) {
+    if (isCancelled()) return false;
+    try {
+      const res = await fetch("/api/health", { cache: "no-store" });
+      if (res.ok) return true;
+      // 429 while waking — back off harder instead of hammering.
+      if (res.status === 429) {
+        await sleep(5000);
+        continue;
+      }
+    } catch {
+      /* service still waking */
+    }
+    await sleep(attempt < 5 ? 2000 : 3000);
+  }
+  return false;
+}
+
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -280,8 +300,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (sessionLoadedRef.current) return;
 
     let cancelled = false;
+    const isCancelled = () => cancelled;
     (async () => {
-      // At most 2 calm attempts — never poll every few seconds (causes Render 429).
+      // Let free-tier Render finish waking before auth/bootstrap (avoids 429 storms).
+      await waitForApiReady(isCancelled);
+      if (cancelled) return;
+
       for (let attempt = 1; attempt <= 2 && !cancelled; attempt++) {
         try {
           const me = await loadAuthMe();
@@ -315,7 +339,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
 
           if (attempt < 2) {
-            await sleep(isRateLimited ? 4000 : 1200);
+            await sleep(isRateLimited ? 8000 : 2000);
             continue;
           }
         }

@@ -45,22 +45,17 @@ async function readBody(res: Response): Promise<unknown> {
 }
 
 export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const method = (init?.method ?? "GET").toUpperCase();
   let res = await send(url, init);
 
-  // One calm retry only — aggressive loops make Render 429 worse.
-  if (!res.ok && [429, 502, 503].includes(res.status)) {
-    const wait = retryAfterMs(res, res.status === 429 ? 2500 : 800);
-    await sleep(wait);
+  // Retry only transient gateway errors. Never auto-retry 429 — that worsens rate limits
+  // while Render free instances are waking up.
+  if (!res.ok && [502, 503].includes(res.status)) {
+    await sleep(retryAfterMs(res, 1200));
     res = await send(url, init);
   }
 
   const data = await readBody(res);
   if (!res.ok) {
-    // Avoid retry storms: surface 429 clearly so callers can back off.
-    if (res.status === 429 && method === "GET") {
-      throw new Error(apiErrorMessage(data, 429));
-    }
     throw new Error(apiErrorMessage(data, res.status));
   }
   return data as T;
