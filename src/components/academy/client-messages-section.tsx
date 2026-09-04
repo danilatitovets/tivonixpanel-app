@@ -165,8 +165,7 @@ export function ClientMessagesSection() {
         className="max-w-xl"
       />
 
-      <div className="min-w-0 overflow-x-auto touch-pan-x [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-        <div className="flex w-max gap-2 pb-1">
+      <div className="flex min-w-0 flex-wrap gap-2">
           {MESSAGE_TEMPLATE_TABS.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -186,7 +185,6 @@ export function ClientMessagesSection() {
               </button>
             );
           })}
-        </div>
       </div>
 
       {activeTab === "forbidden" ? (

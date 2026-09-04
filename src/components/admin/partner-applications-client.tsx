@@ -86,7 +86,7 @@ export function PartnerApplicationsClient({
   }
 
   async function save(nextStatus?: UserStatus) {
-    if (!selected || !draft) return;
+    if (!selected || !draft || saving) return;
 
     const status = nextStatus ?? draft.status;
 
@@ -133,7 +133,7 @@ export function PartnerApplicationsClient({
       await fetchJson<{ data: ApplicationRow }>(
         `/api/admin/partner-applications/${selected.id}`,
         {
-          method: "PATCH",
+          method: "POST",
           body: JSON.stringify(payload),
         }
       );
@@ -197,34 +197,65 @@ export function PartnerApplicationsClient({
         {filtered.length === 0 ? (
           <EmptyState title="Заявок нет" />
         ) : (
-          <OkxTableScroll>
-          <OkxTable>
-            <OkxTableBody>
+          <>
+            <div className="space-y-3 md:hidden">
               {filtered.map((row) => (
-                <OkxTr key={row.id} className="cursor-pointer" onClick={() => openRow(row)}>
-                  <OkxTd>
-                    <OkxCellPrimary title={row.fullName || "Без имени"} subtitle={row.email || ""} />
-                  </OkxTd>
-                  <OkxTd className="hidden text-[#71717a] sm:table-cell">{row.telegram || "—"}</OkxTd>
-                  <OkxTd className="hidden md:table-cell">{getPartnerTypeLabel(row.partnerType)}</OkxTd>
-                  <OkxTd>
+                <button
+                  key={row.id}
+                  type="button"
+                  onClick={() => openRow(row)}
+                  className="w-full rounded-2xl bg-[#f4f4f5] p-4 text-left transition-colors hover:bg-[#ebebeb]"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-[#18181b]">
+                        {row.fullName || "Без имени"}
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-[#71717a]">
+                        {[row.email, row.telegram].filter(Boolean).join(" · ") || "—"}
+                      </p>
+                    </div>
                     <StatusBadge status={row.status} label={getUserStatusLabel(row.status)} />
-                  </OkxTd>
-                  <OkxTd>
-                    <OkxTableAction
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openRow(row);
-                      }}
-                    >
-                      Открыть
-                    </OkxTableAction>
-                  </OkxTd>
-                </OkxTr>
+                  </div>
+                  <p className="mt-2 text-xs text-[#71717a]">
+                    {getPartnerTypeLabel(row.partnerType)}
+                  </p>
+                </button>
               ))}
-            </OkxTableBody>
-          </OkxTable>
-          </OkxTableScroll>
+            </div>
+
+            <OkxTableScroll className="hidden md:block">
+              <OkxTable>
+                <OkxTableBody>
+                  {filtered.map((row) => (
+                    <OkxTr key={row.id} className="cursor-pointer" onClick={() => openRow(row)}>
+                      <OkxTd>
+                        <OkxCellPrimary
+                          title={row.fullName || "Без имени"}
+                          subtitle={row.email || ""}
+                        />
+                      </OkxTd>
+                      <OkxTd className="text-[#71717a]">{row.telegram || "—"}</OkxTd>
+                      <OkxTd>{getPartnerTypeLabel(row.partnerType)}</OkxTd>
+                      <OkxTd>
+                        <StatusBadge status={row.status} label={getUserStatusLabel(row.status)} />
+                      </OkxTd>
+                      <OkxTd>
+                        <OkxTableAction
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openRow(row);
+                          }}
+                        >
+                          Открыть
+                        </OkxTableAction>
+                      </OkxTd>
+                    </OkxTr>
+                  ))}
+                </OkxTableBody>
+              </OkxTable>
+            </OkxTableScroll>
+          </>
         )}
       </div>
 
@@ -318,7 +349,7 @@ export function PartnerApplicationsClient({
               />
             </ModalField>
 
-            <div className="flex flex-wrap gap-2 pt-2">
+            <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:flex-wrap">
               <button
                 type="button"
                 disabled={saving}

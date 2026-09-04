@@ -1,7 +1,36 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+const HOP_BY_HOP = new Set([
+  "host",
+  "connection",
+  "content-length",
+  "transfer-encoding",
+  "te",
+  "keep-alive",
+  "upgrade",
+  "expect",
+  "proxy-connection",
+  "proxy-authenticate",
+  "proxy-authorization",
+  "trailer",
+]);
+
 function rewriteSetCookie(cookie: string) {
   return cookie.replace(/;\s*Domain=[^;]*/gi, "");
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function retryAfterMs(response: Response): number {
+  const raw = response.headers.get("retry-after");
+  if (!raw) return 800;
+  const seconds = Number(raw);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return Math.min(Math.max(seconds * 1000, 200), 3000);
+  }
+  return 800;
 }
 
 export async function proxyApiToBackend(request: NextRequest): Promise<NextResponse> {
@@ -14,19 +43,22 @@ export async function proxyApiToBackend(request: NextRequest): Promise<NextRespo
   const headers = new Headers();
 
   request.headers.forEach((value, key) => {
-    const lower = key.toLowerCase();
-    if (lower === "host" || lower === "connection" || lower === "content-length") return;
+    if (HOP_BY_HOP.has(key.toLowerCase())) return;
     headers.set(key, value);
   });
 
   const host = request.headers.get("host");
   if (host) headers.set("x-forwarded-host", host);
   headers.set("x-forwarded-proto", request.nextUrl.protocol.replace(":", ""));
+  if (!headers.has("user-agent")) {
+    headers.set("user-agent", "tivonixpanel-frontend-proxy");
+  }
 
   const init: RequestInit = {
     method: request.method,
     headers,
     redirect: "manual",
+    cache: "no-store",
   };
 
   if (request.method !== "GET" && request.method !== "HEAD") {
@@ -39,7 +71,22 @@ export async function proxyApiToBackend(request: NextRequest): Promise<NextRespo
     }
   }
 
-  const backendResponse = await fetch(targetUrl, init);
+  let backendResponse = await fetch(targetUrl, init);
+  if ([429, 502, 503].includes(backendResponse.status)) {
+    const wait = retryAfterMs(backendResponse);
+    console.warn(
+      `[api-proxy] ${request.method} ${request.nextUrl.pathname} -> ${backendResponse.status}, retry in ${wait}ms`
+    );
+    await sleep(wait);
+    backendResponse = await fetch(targetUrl, init);
+  }
+
+  if (!backendResponse.ok) {
+    console.warn(
+      `[api-proxy] ${request.method} ${request.nextUrl.pathname} -> ${backendResponse.status}`
+    );
+  }
+
   const responseHeaders = new Headers();
 
   backendResponse.headers.forEach((value, key) => {

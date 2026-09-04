@@ -3,11 +3,14 @@ import { requireApiRole } from "@/lib/auth/require-api-user";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { adminPartnerApplicationUpdateSchema } from "@/lib/validation/partner-registration";
-import { toUserMessage } from "@/lib/errors";
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function PATCH(request: Request, { params }: Params) {
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function updatePartnerApplication(request: Request, { params }: Params) {
   const auth = await requireApiRole("admin");
   if (auth.response) return auth.response;
 
@@ -93,19 +96,33 @@ export async function PATCH(request: Request, { params }: Params) {
     );
   }
 
-  const { data: updated, error: updateErr } = await admin
+  const selectCols =
+    "id, user_id, full_name, email, telegram, status, partner_type, agency_name, website_url, commission_percent_override, assigned_manager_id, partnership_notes, rejection_reason, reviewed_at, created_at";
+
+  let { data: updated, error: updateErr } = await admin
     .from("profiles")
     .update(patch)
     .eq("id", id)
-    .select(
-      "id, user_id, full_name, email, telegram, status, partner_type, agency_name, website_url, commission_percent_override, assigned_manager_id, partnership_notes, rejection_reason, reviewed_at, created_at"
-    )
+    .select(selectCols)
     .single();
 
+  const retryable = /rate limit|too many|timeout/i.test(updateErr?.message ?? "");
+  if ((updateErr || !updated) && retryable) {
+    await sleep(800);
+    const second = await admin
+      .from("profiles")
+      .update(patch)
+      .eq("id", id)
+      .select(selectCols)
+      .single();
+    updated = second.data;
+    updateErr = second.error;
+  }
+
   if (updateErr || !updated) {
-    console.error("[partner-applications] update failed", updateErr?.code);
+    console.error("[partner-applications] update failed", updateErr?.code, updateErr?.message);
     return NextResponse.json(
-      { error: toUserMessage(updateErr?.message ?? "Не удалось обновить заявку") },
+      { error: "Не удалось сохранить заявку. Попробуйте ещё раз" },
       { status: 500 }
     );
   }
@@ -153,3 +170,6 @@ export async function PATCH(request: Request, { params }: Params) {
     },
   });
 }
+
+export const PATCH = updatePartnerApplication;
+export const POST = updatePartnerApplication;

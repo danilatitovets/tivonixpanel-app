@@ -54,34 +54,72 @@ export default function PayoutsPage() {
       createdBy: currentUser.id,
     });
     if (!result) {
-      toast.error("Сумма превышает доступный баланс");
+      toast.error("Amount превышает доступный баланс");
       return;
     }
-    toast.success("Выплата создана");
+    toast.success("Payout создана");
     setOpen(false);
   }
 
   return (
     <RoleGuard resource="payouts" redirectTo="/my">
-      <AppLayout title="Выплаты" showAddLead={false}>
+      <AppLayout title="Payouts" showAddLead={false}>
         <div className="space-y-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <OkxPageTitle title="Выплаты" description="Выплаты комиссий партнёрам" />
+            <OkxPageTitle title="Payouts" description="Payouts комиссий партнёрам" />
             {canCreate && (
               <button type="button" onClick={() => setOpen(true)} className="h-10 w-full shrink-0 rounded-full bg-[var(--color-sunrise-coral)] px-5 text-sm text-white sm:w-auto">
-                Создать выплату
+                Create выплату
               </button>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <BalanceCard label="К выплате всего" amount={balances.reduce((s, b) => s + b.balance, 0)} />
-            <BalanceCard label="Выплачено за месяц" amount={paidMonth.reduce((s, p) => s + p.amount, 0)} />
+            <BalanceCard label="Paid за месяц" amount={paidMonth.reduce((s, p) => s + p.amount, 0)} />
             <BalanceCard label="Ожидают" amount={pending.length} format="count" />
-            <BalanceCard label="Партнёров с балансом" amount={balances.length} format="count" />
+            <BalanceCard label="Partners с балансом" amount={balances.length} format="count" />
           </div>
 
-          <OkxTableScroll>
+          <div className="space-y-3 md:hidden">
+            {data.payouts.map((p) => (
+              <div key={p.id} className="rounded-2xl bg-[#f4f4f5] p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-[#18181b]">
+                      {getUserName(data, p.partnerId)}
+                    </p>
+                    <p className="mt-0.5 text-xs text-[#71717a]">
+                      {p.paymentMethod} · {p.paidAt ? formatDate(p.paidAt) : "ожидает"}
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-sm font-medium">
+                    {formatCurrency(p.amount, p.currency)}
+                  </p>
+                </div>
+                <div className="mt-3">
+                  <StatusBadge status={p.status} label={PAYOUT_STATUS_LABELS[p.status]} />
+                </div>
+                {p.adminComment ? (
+                  <p className="mt-2 break-words text-xs text-[#71717a]">{p.adminComment}</p>
+                ) : null}
+                {canCreate && p.status === "pending" && (
+                  <button
+                    type="button"
+                    className="mt-3 text-xs underline"
+                    onClick={() => {
+                      markPayoutPaid(p.id, currentUser.id);
+                      toast.success("Payout проведена");
+                    }}
+                  >
+                    Выплатить
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <OkxTableScroll className="hidden md:block">
             <OkxTable className="min-w-[720px]">
               <OkxTableBody>
               {data.payouts.map((p) => (
@@ -98,7 +136,7 @@ export default function PayoutsPage() {
                     {canCreate && p.status === "pending" && (
                       <button type="button" className="text-xs underline" onClick={() => {
                         markPayoutPaid(p.id, currentUser.id);
-                        toast.success("Выплата проведена");
+                        toast.success("Payout проведена");
                       }}>Выплатить</button>
                     )}
                   </OkxTd>
@@ -113,20 +151,20 @@ export default function PayoutsPage() {
               <DialogHeader><DialogTitle>Новая выплата</DialogTitle></DialogHeader>
               <div className="space-y-3">
                 <div>
-                  <Label>Партнёр</Label>
+                  <Label>Partner</Label>
                   <select className="mt-1 h-10 w-full rounded-xl border px-3 text-sm" value={form.partnerId} onChange={(e) => setForm({ ...form, partnerId: e.target.value })}>
-                    <option value="">Выберите</option>
+                    <option value="">Select</option>
                     {data.users.filter((u) => u.role === "partner").map((u) => (
                       <option key={u.id} value={u.id}>{u.name} — баланс {formatCurrency(getPartnerBalance(data, u.id))}</option>
                     ))}
                   </select>
                 </div>
                 {form.partnerId && <p className="text-sm text-[#71717a]">Доступно: {formatCurrency(available)}</p>}
-                <div><Label>Сумма</Label><Input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></div>
+                <div><Label>Amount</Label><Input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></div>
                 <div><Label>Метод</Label><Input value={form.paymentMethod} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })} /></div>
                 <div><Label>Реквизиты</Label><Input value={form.paymentDetails} onChange={(e) => setForm({ ...form, paymentDetails: e.target.value })} /></div>
-                <div><Label>Комментарий</Label><Input value={form.adminComment} onChange={(e) => setForm({ ...form, adminComment: e.target.value })} /></div>
-                <button type="button" className="w-full rounded-full bg-[var(--color-sunrise-coral)] py-2 text-sm text-white" onClick={handleCreate}>Создать</button>
+                <div><Label>Comment</Label><Input value={form.adminComment} onChange={(e) => setForm({ ...form, adminComment: e.target.value })} /></div>
+                <button type="button" className="w-full rounded-full bg-[var(--color-sunrise-coral)] py-2 text-sm text-white" onClick={handleCreate}>Create</button>
               </div>
             </DialogContent>
           </Dialog>

@@ -55,7 +55,7 @@ function ChartEmpty({ height, label }: { height: number; label: string }) {
 function formatTooltipValue(value: unknown, format: "number" | "currency") {
   const n = Number(value ?? 0);
   if (format === "currency") return formatCurrency(n);
-  return n.toLocaleString("ru-RU");
+  return n.toLocaleString("en-US");
 }
 
 export function LeadsChart({
@@ -63,7 +63,7 @@ export function LeadsChart({
   dataKey,
   xKey,
   height = 240,
-  emptyLabel = "Пока нет данных по клиентам",
+  emptyLabel = "No client data yet",
   valueFormat = "number",
 }: ChartProps) {
   if (!chartHasValues(data, dataKey)) {
@@ -84,7 +84,7 @@ export function LeadsChart({
         />
         <Tooltip
           contentStyle={tooltipStyle}
-          formatter={(value) => [formatTooltipValue(value, valueFormat), "Клиенты"]}
+          formatter={(value) => [formatTooltipValue(value, valueFormat), "Clients"]}
         />
         <Line
           type="monotone"
@@ -104,7 +104,7 @@ export function SalesChart({
   dataKey,
   xKey,
   height = 240,
-  emptyLabel = "Пока нет данных",
+  emptyLabel = "No data yet",
   valueFormat = "number",
 }: ChartProps) {
   if (!chartHasValues(data, dataKey)) {
@@ -131,7 +131,7 @@ export function SalesChart({
           contentStyle={tooltipStyle}
           formatter={(value) => [
             formatTooltipValue(value, isCurrency ? "currency" : "number"),
-            isCurrency ? "Сумма" : "Количество",
+            isCurrency ? "Amount" : "Count",
           ]}
         />
         <Bar dataKey={dataKey} fill={CORAL} radius={[8, 8, 0, 0]} maxBarSize={44} />
@@ -143,7 +143,7 @@ export function SalesChart({
 export function ConversionChart({
   data,
   height = 240,
-  emptyLabel = "Воронка появится после первых клиентов",
+  emptyLabel = "Funnel will appear after the first clients",
 }: {
   data: { stage: string; count: number }[];
   height?: number;
@@ -168,7 +168,7 @@ export function ConversionChart({
         />
         <Tooltip
           contentStyle={tooltipStyle}
-          formatter={(value) => [Number(value ?? 0).toLocaleString("ru-RU"), "Этап"]}
+          formatter={(value) => [Number(value ?? 0).toLocaleString("en-US"), "Stage"]}
         />
         <Bar dataKey="count" fill={CARBON} radius={[0, 8, 8, 0]} maxBarSize={22} />
       </BarChart>
@@ -179,8 +179,8 @@ export function ConversionChart({
 export function TopPartnersChart({
   data,
   height = 240,
-  emptyLabel = "Недостаточно данных для рейтинга",
-  valueLabel = "Сделки",
+  emptyLabel = "Not enough data for ranking",
+  valueLabel = "Deals",
 }: {
   data: { name: string; deals: number }[];
   height?: number;
@@ -208,7 +208,7 @@ export function TopPartnersChart({
         <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={axisStyle} width={36} />
         <Tooltip
           contentStyle={tooltipStyle}
-          formatter={(value) => [Number(value ?? 0).toLocaleString("ru-RU"), valueLabel]}
+          formatter={(value) => [Number(value ?? 0).toLocaleString("en-US"), valueLabel]}
         />
         <Bar dataKey="deals" fill={CORAL} radius={[8, 8, 0, 0]} maxBarSize={48} />
       </BarChart>
@@ -226,7 +226,7 @@ export function ChartPanel({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 overflow-hidden">
       <div className="mb-3">
         <h3 className="text-[15px] font-bold tracking-[-0.009em] text-[var(--color-carbon-black)]">
           {title}

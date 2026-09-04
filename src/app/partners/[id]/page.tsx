@@ -9,7 +9,7 @@ import { BalanceCard } from "@/components/finance/balance-card";
 import { ExportButton } from "@/components/common/export-button";
 import { PARTNER_LEADS_EXPORT_COLUMNS } from "@/lib/export-columns";
 import { TopPartnersChart } from "@/components/charts/dashboard-charts";
-import { OkxTable, OkxTableBody, OkxTr, OkxTd, OkxTableScroll } from "@/components/ui/okx-table";
+import { OkxTable, OkxTableBody, OkxTr, OkxTd } from "@/components/ui/okx-table";
 import { useAppData } from "@/lib/store";
 import { getPartnerStats, getPartnerBalance } from "@/lib/analytics";
 import { formatCurrency } from "@/lib/commission";
@@ -82,15 +82,17 @@ export default function PartnerDetailPage({ params }: { params: Promise<{ id: st
 
           <section>
             <h2 className="mb-3 font-semibold">Начисления</h2>
-            <OkxTableScroll>
-              <OkxTable className="min-w-[480px]">
-                <OkxTableBody>
-                  {txs.map((t) => (
-                    <OkxTr key={t.id}><OkxTd>{t.type}</OkxTd><OkxTd>{formatCurrency(t.amount)}</OkxTd><OkxTd>{t.description}</OkxTd></OkxTr>
-                  ))}
-                </OkxTableBody>
-              </OkxTable>
-            </OkxTableScroll>
+            <div className="space-y-3">
+              {txs.map((t) => (
+                <div key={t.id} className="rounded-2xl bg-[#f4f4f5] p-4 md:rounded-none md:bg-transparent md:p-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="min-w-0 flex-1 break-words text-sm">{t.description || t.type}</p>
+                    <p className="shrink-0 text-sm font-medium">{formatCurrency(t.amount)}</p>
+                  </div>
+                  <p className="mt-1 text-xs text-[#71717a] md:hidden">{t.type}</p>
+                </div>
+              ))}
+            </div>
           </section>
 
           <section>

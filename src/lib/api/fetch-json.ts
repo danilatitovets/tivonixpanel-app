@@ -9,14 +9,40 @@ function resolveApiUrl(url: string): string {
   return url;
 }
 
-export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(resolveApiUrl(url), {
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function retryAfterMs(res: Response): number {
+  const raw = res.headers.get("retry-after");
+  if (!raw) return 800;
+  const seconds = Number(raw);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return Math.min(Math.max(seconds * 1000, 200), 3000);
+  }
+  return 800;
+}
+
+async function send(url: string, init?: RequestInit): Promise<Response> {
+  return fetch(resolveApiUrl(url), {
+    cache: "no-store",
     ...init,
     headers: {
       "Content-Type": "application/json",
       ...(init?.headers ?? {}),
     },
   });
+}
+
+export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const method = (init?.method ?? "GET").toUpperCase();
+  let res = await send(url, init);
+
+  if (!res.ok && [429, 502, 503].includes(res.status) && method !== "GET" && method !== "HEAD") {
+    await sleep(retryAfterMs(res));
+    res = await send(url, init);
+  }
+
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(apiErrorMessage(data, res.status));

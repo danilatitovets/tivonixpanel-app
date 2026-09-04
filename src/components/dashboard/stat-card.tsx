@@ -19,7 +19,7 @@ export function StatCard({
   return (
     <div
       className={cn(
-        "min-w-[140px] flex-1 rounded-[15px] bg-[var(--color-fog-gray)] px-5 py-4",
+        "min-w-0 flex-1 rounded-[15px] bg-[var(--color-fog-gray)] px-5 py-4",
         className
       )}
     >

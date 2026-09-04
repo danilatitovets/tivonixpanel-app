@@ -27,9 +27,16 @@ export function isRestrictedPartnerStatus(status: UserStatus): boolean {
 
 export async function getCurrentUser(): Promise<CurrentAuthUser | null> {
   const supabase = await createClient();
-  const {
+  let {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
+
+  if (!user && authError?.status === 429) {
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    const retry = await supabase.auth.getUser();
+    user = retry.data.user;
+  }
 
   if (!user) return null;
 

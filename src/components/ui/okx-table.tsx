@@ -150,7 +150,7 @@ export function OkxTabs({
 }) {
   return (
     <div className={cn("border-b border-[#e4e4e7]", className)}>
-      <div className="flex gap-6 overflow-x-auto">
+      <div className="flex flex-wrap gap-x-6 gap-y-1">
         {tabs.map((tab) => {
           const isActive = active === tab.id;
           return (
@@ -206,7 +206,7 @@ export function OkxPageTitle({
 export function OkxSearch({
   value,
   onChange,
-  placeholder = "Поиск",
+  placeholder = "Search",
   className,
 }: {
   value: string;

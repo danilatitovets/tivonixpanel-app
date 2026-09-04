@@ -22,7 +22,7 @@ export function AccountSheet({ open, onOpenChange }: AccountSheetProps) {
         showCloseButton={false}
         className={cn(
           "flex h-[min(92dvh,920px)] max-h-[min(92dvh,920px)] flex-col gap-0 overflow-hidden bg-[var(--color-paper-white)] p-0 md:h-dvh md:max-h-dvh",
-          "!w-[min(96vw,560px)] !max-w-[560px] min-w-[320px] sm:min-w-[420px]",
+          "!w-[min(96vw,560px)] !max-w-[560px] min-w-0",
           "data-ending-style:translate-x-full data-starting-style:translate-x-full"
         )}
       >

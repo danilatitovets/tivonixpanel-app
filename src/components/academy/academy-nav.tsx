@@ -28,7 +28,6 @@ export function AcademyNav({
   compactTopbar = false,
 }: AcademyNavProps) {
   const navBarRef = useRef<HTMLDivElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
   const activeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -50,18 +49,6 @@ export function AcademyNav({
     };
   }, []);
 
-  useEffect(() => {
-    const container = scrollRef.current;
-    const button = activeButtonRef.current;
-    if (!container || !button) return;
-
-    const targetLeft = button.offsetLeft - (container.clientWidth - button.offsetWidth) / 2;
-    container.scrollTo({
-      left: Math.max(0, targetLeft),
-      behavior: "smooth",
-    });
-  }, [activeSection]);
-
   return (
     <>
       <div
@@ -72,13 +59,10 @@ export function AcademyNav({
           compactTopbar ? "top-12 lg:top-0" : "top-[var(--app-header-height)]"
         )}
       >
-        <div
-          ref={scrollRef}
-          className="min-w-0 overflow-x-auto overscroll-x-contain py-2 touch-pan-x [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-        >
+        <div className="min-w-0 py-2">
           <nav
             aria-label="Разделы обучения"
-            className="flex w-max flex-nowrap gap-2 px-4 md:px-6 lg:px-8"
+            className="flex flex-wrap gap-2 px-4 md:px-6 lg:px-8"
           >
             {PRACTICAL_ACADEMY_SECTIONS.map((section) => {
               const isActive = activeSection === section.id;

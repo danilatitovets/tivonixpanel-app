@@ -89,7 +89,7 @@ export default function DealsPage() {
         notes: form.notes,
         createdBy: user.id,
       });
-      toast.success("Сделка создана");
+      toast.success("Deal создана");
       setOpen(false);
     } catch (error) {
       toast.error(toUserMessage(error, "Не удалось создать сделку"));
@@ -136,14 +136,14 @@ export default function DealsPage() {
 
   return (
     <RoleGuard resource="deals" redirectTo="/dashboard">
-    <AppLayout title="Сделки" showAddLead={false}>
+    <AppLayout title="Deals" showAddLead={false}>
       <div className="space-y-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <OkxPageTitle title="Сделки" description="Закрытые заказы и расчёт комиссии партнёров" />
+          <OkxPageTitle title="Deals" description="Закрытые заказы и расчёт комиссии партнёров" />
           <div className="flex gap-2">
             {canCreate && (
               <button type="button" onClick={() => setOpen(true)} className="h-10 rounded-full bg-[var(--color-sunrise-coral)] px-5 text-sm text-white">
-                Создать сделку
+                Create сделку
               </button>
             )}
             <DealsExportButton
@@ -171,17 +171,56 @@ export default function DealsPage() {
         )}
 
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <BalanceCard label="Сумма всех сделок" amount={deals.reduce((s, d) => s + d.amount, 0)} />
-          <BalanceCard label="Оплачено" amount={paid.reduce((s, d) => s + d.amount, 0)} />
-          <BalanceCard label="Ожидает оплату" amount={waiting.length} format="count" />
+          <BalanceCard label="Amount всех сделок" amount={deals.reduce((s, d) => s + d.amount, 0)} />
+          <BalanceCard label="Paid" amount={paid.reduce((s, d) => s + d.amount, 0)} />
+          <BalanceCard label="Pending оплату" amount={waiting.length} format="count" />
           <BalanceCard label="Комиссий к выплате" amount={accrued.reduce((s, d) => s + d.commissionAmount, 0)} />
         </div>
 
-        <OkxTableScroll>
+        <div className="space-y-3 md:hidden">
+          {deals.length === 0 ? (
+            <EmptyState
+              title="Сделок пока нет"
+              description="Закрытые сделки появятся здесь после закрытия клиента"
+            />
+          ) : (
+            deals.map((d) => (
+              <div key={d.id} className="rounded-2xl bg-[#f4f4f5] p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-[#18181b]">{d.clientName}</p>
+                    <p className="mt-0.5 truncate text-xs text-[#71717a]">
+                      {getServiceTypeLabel(d.serviceType)} · {getUserName(data, d.partnerId)}
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-sm font-medium">{formatCurrency(d.amount, d.currency)}</p>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <StatusBadge status={d.paymentStatus} label={DEAL_PAYMENT_LABELS[d.paymentStatus]} />
+                  <StatusBadge status={d.commissionStatus} label={COMMISSION_STATUS_LABELS[d.commissionStatus]} />
+                </div>
+                <p className="mt-2 text-xs text-[#71717a]">
+                  Комиссия {formatCurrency(d.commissionAmount, d.currency)} · {formatDate(d.closedAt)}
+                </p>
+                {canConfirm && d.paymentStatus === "waiting_payment" && (
+                  <button
+                    type="button"
+                    className="mt-3 text-xs font-medium underline"
+                    onClick={() => void handleConfirmPayment(d.id)}
+                  >
+                    Confirm оплату
+                  </button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+
+        <OkxTableScroll className="hidden md:block">
           <OkxTable className="min-w-[900px]">
           <OkxTableHead>
             <OkxTr interactive={false}>
-              {["Клиент", "Услуга", "Сумма", "Партнёр", "%", "Комиссия", "Оплата", "Комиссия", "Дата", ""].map((h) => (
+              {["Client", "Service", "Amount", "Partner", "%", "Commission", "Оплата", "Commission", "Date", ""].map((h) => (
                 <OkxTh key={h}>{h}</OkxTh>
               ))}
             </OkxTr>
@@ -211,7 +250,7 @@ export default function DealsPage() {
                 <OkxTd>
                   {canConfirm && d.paymentStatus === "waiting_payment" && (
                     <button type="button" className="text-xs font-medium underline" onClick={() => void handleConfirmPayment(d.id)}>
-                      Подтвердить оплату
+                      Confirm оплату
                     </button>
                   )}
                 </OkxTd>
@@ -227,37 +266,37 @@ export default function DealsPage() {
             <DialogHeader><DialogTitle>Новая сделка (только admin)</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <div>
-                <Label>Клиент</Label>
+                <Label>Client</Label>
                 <select className="mt-1 h-10 w-full rounded-xl border px-3 text-sm" value={form.leadId} onChange={(e) => {
                   const l = data.leads.find((x) => x.id === e.target.value);
                   setForm({ ...form, leadId: e.target.value, clientName: l?.businessName ?? "" });
                 }}>
-                  <option value="">Выберите клиента</option>
+                  <option value="">Select клиента</option>
                   {data.leads.map((l) => <option key={l.id} value={l.id}>{l.businessName}</option>)}
                 </select>
               </div>
-              <div><Label>Клиент</Label><Input value={form.clientName} onChange={(e) => setForm({ ...form, clientName: e.target.value })} /></div>
-              <div><Label>Услуга</Label>
+              <div><Label>Client</Label><Input value={form.clientName} onChange={(e) => setForm({ ...form, clientName: e.target.value })} /></div>
+              <div><Label>Service</Label>
                 <select className="mt-1 h-10 w-full rounded-xl border px-3 text-sm" value={form.serviceType} onChange={(e) => setForm({ ...form, serviceType: e.target.value })}>
                   {SERVICE_TYPE_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
               </div>
-              <div><Label>Сумма</Label><Input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></div>
+              <div><Label>Amount</Label><Input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></div>
               {form.amount && (
                 <CommissionPreview amount={Number(form.amount)} partnerClosedDealsCount={closedCount} settings={data.commissionSettings} />
               )}
               <div>
-                <Label>Статус оплаты</Label>
+                <Label>Status оплаты</Label>
                 <select className="mt-1 h-10 w-full rounded-xl border px-3 text-sm" value={form.paymentStatus} onChange={(e) => setForm({ ...form, paymentStatus: e.target.value as DealPaymentStatus })}>
-                  <option value="waiting_payment">Ожидает оплату</option>
-                  <option value="paid">Оплачено</option>
-                  <option value="draft">Черновик</option>
+                  <option value="waiting_payment">Pending оплату</option>
+                  <option value="paid">Paid</option>
+                  <option value="draft">Draft</option>
                 </select>
               </div>
               <button type="button" disabled={submitting} className="w-full rounded-full bg-[var(--color-sunrise-coral)] py-2 text-sm text-white disabled:opacity-50" onClick={() => void handleCreate()}>
-                {submitting ? "Создание…" : "Создать"}
+                {submitting ? "Создание…" : "Create"}
               </button>
             </div>
           </DialogContent>

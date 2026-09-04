@@ -54,7 +54,7 @@ export function AppLayout({
   }, [pathname, isBootstrapping, refreshFromServer]);
 
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="flex min-h-screen min-w-0 overflow-x-hidden bg-white">
       <div className="hidden lg:block">
         <Sidebar className="fixed inset-y-0 left-0 z-40" />
       </div>
@@ -84,7 +84,7 @@ export function AppLayout({
         />
         <main
           className={cn(
-            "min-w-0 flex-1 overflow-x-auto px-4 py-6 md:px-6 lg:px-8",
+            "min-w-0 flex-1 overflow-x-hidden px-4 py-6 md:px-6 lg:px-8",
             compactTopbar && "pt-0",
             mainClassName
           )}

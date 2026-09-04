@@ -9,15 +9,11 @@ interface ProspectingBoardProps {
   onStatusChange: (id: string, status: ProspectStatus) => void;
 }
 
-const boardScrollClass =
-  "flex w-max min-w-full gap-3 pb-3 [-ms-overflow-style:auto] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#d1d5db] [&::-webkit-scrollbar-track]:bg-transparent";
-
 export function ProspectingBoard({ prospects, onOpen, onStatusChange }: ProspectingBoardProps) {
   return (
-    <div className="w-full min-w-0">
-      <div className="overflow-x-auto overscroll-x-contain">
-        <div className={boardScrollClass}>
-          {BOARD_COLUMNS.map((col) => {
+    <div className="w-full min-w-0 space-y-3 md:space-y-0">
+      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap lg:flex-nowrap">
+        {BOARD_COLUMNS.map((col) => {
             const items = prospects.filter((p) => {
               if (col.status === "duplicate") {
                 return ["duplicate", "not_relevant", "do_not_contact"].includes(p.status);
@@ -31,7 +27,7 @@ export function ProspectingBoard({ prospects, onOpen, onStatusChange }: Prospect
             return (
               <div
                 key={col.status}
-                className="flex w-64 shrink-0 snap-start flex-col rounded-2xl bg-[#f4f4f5] p-3"
+                className="flex w-full min-w-0 flex-col rounded-2xl bg-[#f4f4f5] p-3 md:w-[calc(50%-0.375rem)] lg:w-64 lg:shrink-0"
               >
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <h3 className="truncate text-xs font-semibold text-[#18181b]">{col.label}</h3>
@@ -54,9 +50,7 @@ export function ProspectingBoard({ prospects, onOpen, onStatusChange }: Prospect
               </div>
             );
           })}
-        </div>
       </div>
-      <p className="mt-1 text-xs text-[#9ca3af] lg:hidden">Листай доску влево →</p>
     </div>
   );
 }
