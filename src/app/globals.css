@@ -207,7 +207,6 @@
 
   [data-slot="dialog-body"] {
     min-height: 0;
-    flex: 1 1 auto;
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
@@ -221,4 +220,10 @@
   [data-slot="dialog-overlay"] {
     overscroll-behavior: none;
   }
+}
+
+/* Closed / leftover overlays must never eat clicks on the panel. */
+[data-slot="dialog-overlay"]:not([data-open]),
+[data-slot="sheet-overlay"]:not([data-open]) {
+  pointer-events: none !important;
 }

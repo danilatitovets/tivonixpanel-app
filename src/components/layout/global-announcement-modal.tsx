@@ -49,8 +49,10 @@ export function GlobalAnnouncementModal({ ready }: { ready: boolean }) {
     router.push("/academy");
   }
 
+  if (!open) return null;
+
   return (
-    <Dialog open={open} onOpenChange={(visible) => !visible && dismiss()}>
+    <Dialog open onOpenChange={(visible) => !visible && dismiss()}>
       <DialogContent
         showCloseButton
         className="!flex max-h-[min(92dvh,820px)] w-[calc(100%-2rem)] !max-w-3xl !flex-col gap-0 overflow-hidden rounded-2xl border-0 bg-[#f4f4f5] p-0 text-[#18181b] shadow-2xl ring-0 z-[100] sm:!max-w-4xl [&_[data-slot=dialog-close]]:top-3 [&_[data-slot=dialog-close]]:right-3 [&_[data-slot=dialog-close]]:z-10 [&_[data-slot=dialog-close]]:text-[#18181b]/60 [&_[data-slot=dialog-close]]:hover:bg-[#18181b]/5 [&_[data-slot=dialog-close]]:hover:text-[#18181b]"
@@ -68,14 +70,14 @@ export function GlobalAnnouncementModal({ ready }: { ready: boolean }) {
             Второе обновление
           </span>
           <DialogTitle className="mt-4 text-center font-sans text-2xl font-semibold leading-tight tracking-tight text-[#18181b] sm:text-[1.75rem]">
-            Как искать клиентов
+            How to find clients
           </DialogTitle>
           <DialogDescription className="sr-only">
             Переработали раздел обучения для партнёров TIVONIX
           </DialogDescription>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-6 py-5 sm:px-8 sm:py-6">
+        <div className="min-h-0 overflow-y-auto overscroll-y-contain px-6 py-5 sm:px-8 sm:py-6">
           <p className="text-center text-base leading-relaxed text-[#71717a] sm:text-lg">
             Переработали обучение для вашего удобства: где искать, что писать, как добавить лида в
             CRM и получить выплату.
@@ -96,7 +98,7 @@ export function GlobalAnnouncementModal({ ready }: { ready: boolean }) {
           <p className="mt-5 pb-1 text-center text-base leading-relaxed text-[#71717a]">
             Открой раздел{" "}
             <Link href="/academy" className="font-medium text-[#18181b] underline underline-offset-2">
-              «Как искать клиентов»
+              «How to find clients»
             </Link>{" "}
             в меню слева — там всё по шагам.
           </p>
@@ -108,7 +110,7 @@ export function GlobalAnnouncementModal({ ready }: { ready: boolean }) {
             onClick={openAcademy}
             className="h-12 w-full rounded-full bg-[var(--color-sunrise-coral)] text-base font-medium text-white transition-colors hover:opacity-90 active:scale-[0.99] sm:h-[3.25rem] sm:text-lg"
           >
-            Открыть обучение
+            Open обучение
           </button>
           <button
             type="button"

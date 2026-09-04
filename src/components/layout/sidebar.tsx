@@ -57,9 +57,16 @@ interface SidebarProps {
 async function handleLogout(onNavigate?: () => void) {
   onNavigate?.();
   if (!isDemoMode()) {
-    await logoutApi();
+    try {
+      await Promise.race([
+        logoutApi(),
+        new Promise((resolve) => setTimeout(resolve, 2500)),
+      ]);
+    } catch {
+      /* still leave the panel even if the API call fails */
+    }
   }
-  window.location.href = "/login";
+  window.location.assign("/login");
 }
 
 export function Sidebar({ onNavigate, className }: SidebarProps) {
