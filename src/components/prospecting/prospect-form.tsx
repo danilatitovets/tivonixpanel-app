@@ -82,7 +82,7 @@ export function ProspectForm({ open, onClose, onSave, initial }: ProspectFormPro
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent
         side="right"
-        className="flex h-[min(92dvh,920px)] max-h-[min(92dvh,920px)] w-full max-w-lg flex-col gap-0 overflow-hidden p-0 sm:max-w-xl md:h-auto [&>button]:hidden"
+        className="flex h-[min(92dvh,920px)] max-h-[min(92dvh,920px)] w-full min-w-0 max-w-full flex-col gap-0 overflow-hidden p-0 md:h-auto md:max-w-lg [&>button]:hidden"
       >
         <div className="shrink-0 border-b border-[#ebebeb] px-6 py-4">
           <h2 className="text-lg font-semibold text-[#18181b]">Добавить контакт</h2>
@@ -91,7 +91,7 @@ export function ProspectForm({ open, onClose, onSave, initial }: ProspectFormPro
           </p>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-6 py-5">
+        <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto overscroll-contain px-6 py-5">
           <FormField label="Название бизнеса" required>
             <input
               value={form.businessName}

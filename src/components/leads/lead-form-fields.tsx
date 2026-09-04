@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 
 const fieldShell =
-  "flex h-11 items-center gap-1.5 rounded-xl bg-[#f4f4f5] px-3.5 transition-colors focus-within:bg-[#f4f4f5]";
+  "flex h-11 min-w-0 items-center gap-1.5 rounded-xl bg-[#f4f4f5] px-3.5 transition-colors focus-within:bg-[#f4f4f5]";
 
 const prefixText = "shrink-0 text-sm font-medium text-[#9ca3af] select-none";
 
@@ -86,7 +86,7 @@ export function EmailSplitInput({
         value={local}
         onChange={(e) => onLocalChange(e.target.value.replace(/\s/g, ""))}
         placeholder="mail"
-        className={cn(inputClass, "min-w-[4rem]")}
+        className={cn(inputClass, "min-w-0")}
       />
       <span className={prefixText} aria-hidden>
         @
@@ -119,7 +119,7 @@ export function FormField({
   htmlFor?: string;
 }) {
   return (
-    <div className={className}>
+    <div className={cn("min-w-0 max-w-full", className)}>
       <label htmlFor={htmlFor} className="mb-2 block text-sm text-[#71717a]">
         {label}
         {required && <span className="text-[#18181b]"> *</span>}

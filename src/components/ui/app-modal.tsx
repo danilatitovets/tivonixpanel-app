@@ -40,7 +40,7 @@ export function AppModal({
             {description ? <DialogDescription>{description}</DialogDescription> : null}
           </DialogHeader>
         </div>
-        <div className="min-h-0 overflow-y-auto overscroll-contain px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        <div className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           {children}
         </div>
       </DialogContent>

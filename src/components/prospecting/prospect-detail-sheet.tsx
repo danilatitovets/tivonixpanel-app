@@ -22,9 +22,8 @@ export function ProspectDetailSheet({ prospectId, open, onOpenChange }: Prospect
         side="right"
         showCloseButton={false}
         className={cn(
-          "flex h-[min(92dvh,920px)] max-h-[min(92dvh,920px)] flex-col gap-0 overflow-hidden bg-white p-0 shadow-none md:h-dvh md:max-h-dvh",
-          "!w-[min(96vw,720px)] !max-w-[720px] min-w-0",
-          "data-ending-style:translate-x-full data-starting-style:translate-x-full"
+          "flex h-[min(92dvh,920px)] max-h-[min(92dvh,920px)] w-full min-w-0 max-w-full flex-col gap-0 overflow-hidden bg-white p-0 shadow-none md:h-dvh md:max-h-dvh md:!w-[min(96vw,720px)] md:!max-w-[720px]",
+          "md:data-ending-style:translate-x-full md:data-starting-style:translate-x-full"
         )}
       >
         <header className="z-20 shrink-0 border-b border-[#ebebeb] px-6 py-5">
@@ -50,7 +49,7 @@ export function ProspectDetailSheet({ prospectId, open, onOpenChange }: Prospect
           </div>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-6 py-5">
+        <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-6 py-5">
           {prospectId && (
             <ProspectDetailContent
               key={prospectId}

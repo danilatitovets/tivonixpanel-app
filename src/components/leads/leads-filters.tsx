@@ -183,7 +183,7 @@ export function LeadsFilters({
           <SheetContent
             side="bottom"
             showCloseButton={false}
-            className="flex max-h-[90dvh] flex-col gap-0 rounded-t-2xl border-0 bg-white p-0 shadow-none !max-w-none w-full"
+            className="flex max-h-[90dvh] w-full min-w-0 flex-col gap-0 overflow-x-hidden rounded-t-2xl border-0 bg-white p-0 shadow-none !max-w-none"
           >
             <div className="flex items-center justify-between px-5 py-4">
               <h3 className="text-lg font-semibold text-[#18181b]">Фильтры</h3>

@@ -119,7 +119,10 @@ export function LeadForm({
     Boolean(form.source || form.serviceType || form.estimatedBudget)
   );
 
-  const gridClass = cn("grid gap-4 sm:grid-cols-2", mode === "sheet" && "lg:grid-cols-3");
+  const gridClass = cn(
+    "grid min-w-0 gap-4",
+    mode === "sheet" ? "md:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2"
+  );
 
   function update(field: keyof typeof EMPTY_FORM, value: string) {
     setForm((p) => ({ ...p, [field]: value }));
@@ -210,7 +213,7 @@ export function LeadForm({
   }
 
   return (
-    <form id={formId} onSubmit={handleSubmit} className="space-y-10">
+    <form id={formId} onSubmit={handleSubmit} className="min-w-0 max-w-full space-y-10">
       {mode === "sheet" && (
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs text-[#71717a]">

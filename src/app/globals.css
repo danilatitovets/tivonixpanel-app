@@ -197,22 +197,29 @@
     bottom: 0 !important;
     left: 0 !important;
     width: 100% !important;
-    max-width: none !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
     height: auto !important;
     max-height: min(92dvh, 920px) !important;
     transform: none !important;
+    translate: none !important;
     border-radius: 20px 20px 0 0 !important;
-    overflow: hidden !important;
+    overflow-x: hidden !important;
+    overflow-y: hidden !important;
+    box-sizing: border-box !important;
   }
 
   [data-slot="dialog-body"] {
+    min-width: 0;
     min-height: 0;
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
   }
 
   [data-slot="sheet-content"][data-side="right"] > *:not([data-slot="sheet-close"]) {
+    min-width: 0;
     min-height: 0;
   }
 
