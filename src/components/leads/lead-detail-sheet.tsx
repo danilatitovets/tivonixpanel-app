@@ -23,7 +23,7 @@ export function LeadDetailSheet({ leadId, open, onOpenChange }: LeadDetailSheetP
         side="right"
         showCloseButton={false}
         className={cn(
-          "flex h-dvh max-h-dvh flex-col gap-0 overflow-hidden bg-[var(--color-paper-white)] p-0",
+          "flex h-[min(92dvh,920px)] max-h-[min(92dvh,920px)] flex-col gap-0 overflow-hidden bg-[var(--color-paper-white)] p-0 md:h-dvh md:max-h-dvh",
           "!w-[min(96vw,720px)] !max-w-[720px] min-w-0 sm:min-w-[360px]",
           "data-ending-style:translate-x-full data-starting-style:translate-x-full"
         )}

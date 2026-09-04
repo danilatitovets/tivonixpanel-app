@@ -9,6 +9,7 @@ import { AppModal, ModalField, fieldClass } from "@/components/ui/app-modal";
 import {
   OkxTable,
   OkxTableBody,
+  OkxTableScroll,
   OkxTr,
   OkxTd,
   OkxCellPrimary,
@@ -196,6 +197,7 @@ export function PartnerApplicationsClient({
         {filtered.length === 0 ? (
           <EmptyState title="Заявок нет" />
         ) : (
+          <OkxTableScroll>
           <OkxTable>
             <OkxTableBody>
               {filtered.map((row) => (
@@ -203,8 +205,8 @@ export function PartnerApplicationsClient({
                   <OkxTd>
                     <OkxCellPrimary title={row.fullName || "Без имени"} subtitle={row.email || ""} />
                   </OkxTd>
-                  <OkxTd className="text-[#71717a]">{row.telegram || "—"}</OkxTd>
-                  <OkxTd>{getPartnerTypeLabel(row.partnerType)}</OkxTd>
+                  <OkxTd className="hidden text-[#71717a] sm:table-cell">{row.telegram || "—"}</OkxTd>
+                  <OkxTd className="hidden md:table-cell">{getPartnerTypeLabel(row.partnerType)}</OkxTd>
                   <OkxTd>
                     <StatusBadge status={row.status} label={getUserStatusLabel(row.status)} />
                   </OkxTd>
@@ -222,6 +224,7 @@ export function PartnerApplicationsClient({
               ))}
             </OkxTableBody>
           </OkxTable>
+          </OkxTableScroll>
         )}
       </div>
 

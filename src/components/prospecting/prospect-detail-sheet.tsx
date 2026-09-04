@@ -22,7 +22,7 @@ export function ProspectDetailSheet({ prospectId, open, onOpenChange }: Prospect
         side="right"
         showCloseButton={false}
         className={cn(
-          "flex h-dvh max-h-dvh flex-col gap-0 overflow-hidden bg-white p-0 shadow-none",
+          "flex h-[min(92dvh,920px)] max-h-[min(92dvh,920px)] flex-col gap-0 overflow-hidden bg-white p-0 shadow-none md:h-dvh md:max-h-dvh",
           "!w-[min(96vw,720px)] !max-w-[720px] min-w-[320px] sm:min-w-[480px]",
           "data-ending-style:translate-x-full data-starting-style:translate-x-full"
         )}

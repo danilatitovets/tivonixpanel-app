@@ -56,22 +56,29 @@ function DialogContent({
         data-slot="dialog-content"
         data-placement={placement}
         className={cn(
-          "fixed z-50 flex w-full flex-col gap-5 border-0 bg-[var(--color-paper-white)] text-[15px] text-[var(--color-carbon-black)] shadow-[var(--shadow-subtle)] outline-none duration-200",
+          "fixed z-50 flex w-full flex-col border-0 bg-[var(--color-paper-white)] text-[15px] text-[var(--color-carbon-black)] shadow-[var(--shadow-subtle)] outline-none duration-200",
+          "inset-x-0 bottom-0 top-auto max-h-[min(92dvh,920px)] max-w-none translate-x-0 translate-y-0 overflow-hidden rounded-t-[20px] data-open:animate-in data-open:fade-in-0 data-open:slide-in-from-bottom-8 data-closed:animate-out data-closed:fade-out-0 data-closed:slide-out-to-bottom-8",
+          "md:inset-auto md:top-1/2 md:left-1/2 md:bottom-auto md:max-h-[min(90vh,900px)] md:w-full md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-[15px] md:data-open:slide-in-from-bottom-0 md:data-open:zoom-in-95 md:data-closed:slide-out-to-bottom-0 md:data-closed:zoom-out-95",
           placement === "bottom"
-            ? "inset-x-0 bottom-0 top-auto h-auto max-h-[min(92dvh,920px)] max-w-none translate-x-0 translate-y-0 overflow-hidden rounded-t-[20px] p-0 data-open:animate-in data-open:fade-in-0 data-open:slide-in-from-bottom-8 data-closed:animate-out data-closed:fade-out-0 data-closed:slide-out-to-bottom-8 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:bottom-auto sm:h-auto sm:max-h-[min(90vh,900px)] sm:w-full sm:max-w-2xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[15px] sm:data-open:slide-in-from-bottom-0 sm:data-open:zoom-in-95 sm:data-closed:slide-out-to-bottom-0 sm:data-closed:zoom-out-95"
-            : "top-1/2 left-1/2 max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-[15px] p-6 sm:max-w-md data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            ? "gap-0 p-0 md:max-w-2xl"
+            : "gap-5 p-6 md:max-w-md",
           className
         )}
         {...props}
       >
-        {children}
+        <div
+          data-slot="dialog-body"
+          className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto overscroll-contain"
+        >
+          {children}
+        </div>
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
             render={
               <Button
                 variant="ghost"
-                className="absolute top-3 right-3 size-9 rounded-full text-[var(--color-zinc-gray)] hover:bg-[var(--color-fog-gray)] hover:text-[var(--color-carbon-black)]"
+                className="absolute top-3 right-3 z-10 size-9 rounded-full text-[var(--color-zinc-gray)] hover:bg-[var(--color-fog-gray)] hover:text-[var(--color-carbon-black)]"
                 size="icon-sm"
               />
             }

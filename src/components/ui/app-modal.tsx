@@ -27,18 +27,22 @@ export function AppModal({
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent
+        placement="bottom"
         className={cn(
-          "gap-0 overflow-hidden rounded-[15px] border-0 p-0 shadow-[var(--shadow-subtle)] sm:max-w-lg",
+          "gap-0 overflow-hidden border-0 p-0 shadow-[var(--shadow-subtle)] md:max-w-lg",
           className
         )}
       >
-        <div className="px-6 pt-6 pb-4">
+        <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-[var(--color-mist-gray)] md:hidden" />
+        <div className="shrink-0 px-6 pt-4 pb-3 pr-14">
           <DialogHeader className="gap-1.5 text-left">
             <DialogTitle>{title}</DialogTitle>
             {description ? <DialogDescription>{description}</DialogDescription> : null}
           </DialogHeader>
         </div>
-        <div className="px-6 pb-6">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+          {children}
+        </div>
       </DialogContent>
     </Dialog>
   );

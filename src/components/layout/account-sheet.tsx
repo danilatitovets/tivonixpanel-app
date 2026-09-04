@@ -21,7 +21,7 @@ export function AccountSheet({ open, onOpenChange }: AccountSheetProps) {
         side="right"
         showCloseButton={false}
         className={cn(
-          "flex h-dvh max-h-dvh flex-col gap-0 overflow-hidden bg-[var(--color-paper-white)] p-0",
+          "flex h-[min(92dvh,920px)] max-h-[min(92dvh,920px)] flex-col gap-0 overflow-hidden bg-[var(--color-paper-white)] p-0 md:h-dvh md:max-h-dvh",
           "!w-[min(96vw,560px)] !max-w-[560px] min-w-[320px] sm:min-w-[420px]",
           "data-ending-style:translate-x-full data-starting-style:translate-x-full"
         )}
@@ -40,7 +40,7 @@ export function AccountSheet({ open, onOpenChange }: AccountSheetProps) {
               type="button"
               onClick={() => onOpenChange(false)}
               className="flex size-9 shrink-0 items-center justify-center rounded-full text-[var(--color-zinc-gray)] transition-colors hover:bg-[var(--color-fog-gray)] hover:text-[var(--color-carbon-black)]"
-              aria-label="Закрыть"
+              aria-label="Close"
             >
               <X className="size-4" />
             </button>
