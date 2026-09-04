@@ -36,7 +36,21 @@ export default function LoginForm() {
       router.replace("/dashboard");
       return;
     }
-    const { user } = await me.json();
+    const body = (await me.json().catch(() => null)) as {
+      user?: {
+        status?: string;
+        blockedUnder16?: boolean;
+        onboardingComplete?: boolean;
+        requiresReaccept?: boolean;
+        crmAccess?: boolean;
+        mustChangePassword?: boolean;
+      };
+    } | null;
+    const user = body?.user;
+    if (!user) {
+      router.replace("/dashboard");
+      return;
+    }
     if (
       user.status === "pending" ||
       user.status === "rejected" ||
@@ -98,7 +112,11 @@ export default function LoginForm() {
       const supabase = createClient();
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) throw signInError;
-      await refreshFromServer();
+      try {
+        await refreshFromServer();
+      } catch {
+        /* dashboard bootstrap will retry calmly */
+      }
       await resolveRedirect();
     } catch (err) {
       setError(toUserMessage(err, "Не удалось войти. Проверьте email и пароль"));

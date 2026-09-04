@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { AppPageSkeleton, type AppPageSkeletonVariant } from "./app-page-skeleton";
-import { useApp, useIsBootstrapping } from "@/lib/store";
-import { isDemoMode } from "@/lib/demo-mode";
+import { useIsBootstrapping } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 interface AppLayoutProps {
@@ -40,18 +39,8 @@ export function AppLayout({
 }: AppLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const isBootstrapping = useIsBootstrapping();
-  const { refreshFromServer } = useApp();
   const pathname = usePathname();
-  const prevPathRef = useRef<string | null>(null);
   const variant = skeletonVariant ?? skeletonVariantForPath(pathname);
-
-  useEffect(() => {
-    if (isDemoMode() || isBootstrapping) return;
-    if (prevPathRef.current !== null && prevPathRef.current !== pathname) {
-      void refreshFromServer();
-    }
-    prevPathRef.current = pathname;
-  }, [pathname, isBootstrapping, refreshFromServer]);
 
   return (
     <div className="flex min-h-screen min-w-0 overflow-x-hidden bg-white">

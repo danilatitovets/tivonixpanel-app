@@ -72,7 +72,8 @@ export async function proxyApiToBackend(request: NextRequest): Promise<NextRespo
   }
 
   let backendResponse = await fetch(targetUrl, init);
-  if ([429, 502, 503].includes(backendResponse.status)) {
+  // Retry 502/503 once. Do not auto-retry 429 — it amplifies rate-limit storms.
+  if ([502, 503].includes(backendResponse.status)) {
     const wait = retryAfterMs(backendResponse);
     console.warn(
       `[api-proxy] ${request.method} ${request.nextUrl.pathname} -> ${backendResponse.status}, retry in ${wait}ms`

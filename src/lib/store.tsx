@@ -281,7 +281,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     let cancelled = false;
     (async () => {
-      for (let attempt = 1; attempt <= 4 && !cancelled; attempt++) {
+      // At most 2 calm attempts — never poll every few seconds (causes Render 429).
+      for (let attempt = 1; attempt <= 2 && !cancelled; attempt++) {
         try {
           const me = await loadAuthMe();
           if (cancelled) return;
@@ -294,6 +295,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             setData(payload.data);
           } catch (bootstrapErr) {
             console.error("[crm] bootstrap failed", bootstrapErr);
+            // Session is enough to leave the skeleton; data can refresh later.
           }
 
           if (!cancelled) {
@@ -304,15 +306,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
         } catch (err) {
           console.error("[crm] session bootstrap failed", err);
           const message = err instanceof Error ? err.message : "";
-          if (/войдите в аккаунт|unauthorized/i.test(message) && attempt === 4) {
+          const isUnauthorized = /войдите в аккаунт|unauthorized/i.test(message);
+          const isRateLimited = /слишком много|too many|429/i.test(message);
+
+          if (isUnauthorized) {
             if (!cancelled) window.location.assign("/login");
             return;
           }
-          await sleep(400 * attempt);
+
+          if (attempt < 2) {
+            await sleep(isRateLimited ? 4000 : 1200);
+            continue;
+          }
         }
       }
+
       if (!cancelled) {
-        sessionLoadedRef.current = false;
+        // Stop the spinner even on failure so the UI is usable; user can reload.
+        sessionLoadedRef.current = true;
         setIsBootstrapping(false);
       }
     })();
@@ -321,21 +332,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, [hydrated, demo, pathname]);
-
-  useEffect(() => {
-    if (demo || isPublicAuthSurface(pathname) || authSession) return;
-    const timer = window.setInterval(() => {
-      void refreshFromServer()
-        .then(() => {
-          sessionLoadedRef.current = true;
-          setIsBootstrapping(false);
-        })
-        .catch(() => {
-          /* keep retrying while the panel is open */
-        });
-    }, 2500);
-    return () => window.clearInterval(timer);
-  }, [authSession, demo, pathname, refreshFromServer]);
 
   useEffect(() => {
     if (hydrated && demo) saveData(data);

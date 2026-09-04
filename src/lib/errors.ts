@@ -60,6 +60,7 @@ const PARTIAL_PATTERNS: Array<[RegExp, string]> = [
   [/email address .* is invalid/i, "Некорректный email"],
   [/invalid email/i, "Некорректный email"],
   [/rate limit/i, "Слишком много попыток. Подождите и попробуйте снова"],
+  [/too many requests/i, "Слишком много запросов. Подождите немного"],
   [/not found/i, "Запись не найдена"],
   [/unauthorized/i, "Войдите в аккаунт"],
   [/forbidden/i, "Недостаточно прав"],
