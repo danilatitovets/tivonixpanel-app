@@ -1,0 +1,80 @@
+# Tivonix Panel — Render Blueprint
+# Frontend + API web services. Database stays on Supabase (not Render Postgres).
+# Secrets (sync: false) are filled in the Dashboard / MCP, never committed.
+
+projects:
+  - name: tivonixpanel
+    environments:
+      - name: production
+        services:
+          - type: web
+            name: tivonixpanel-backend
+            runtime: node
+            plan: free
+            region: frankfurt
+            branch: main
+            buildCommand: NODE_OPTIONS=--max-old-space-size=4096 npm ci && NODE_OPTIONS=--max-old-space-size=4096 npm run build
+            startCommand: node --max-old-space-size=460 scripts/start-prod.cjs
+            healthCheckPath: /api/health
+            envVars:
+              - key: NODE_VERSION
+                value: "22"
+              - key: HOST
+                value: "0.0.0.0"
+              - key: APP_SERVICE
+                value: api
+              - key: NEXT_PUBLIC_DEMO_MODE
+                value: "false"
+              - key: NEXT_PUBLIC_SUPABASE_URL
+                sync: false
+              - key: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+                sync: false
+              - key: SUPABASE_URL
+                sync: false
+              - key: SUPABASE_PUBLISHABLE_KEY
+                sync: false
+              - key: SUPABASE_SECRET_KEY
+                sync: false
+              - key: DATABASE_URL
+                sync: false
+              - key: ADMIN_EMAIL
+                sync: false
+              - key: APP_URL
+                sync: false
+              - key: NEXT_PUBLIC_APP_URL
+                sync: false
+
+          - type: web
+            name: tivonixpanel-web
+            runtime: node
+            plan: free
+            region: frankfurt
+            branch: main
+            buildCommand: NODE_OPTIONS=--max-old-space-size=4096 npm ci && NODE_OPTIONS=--max-old-space-size=4096 npm run build
+            startCommand: node --max-old-space-size=460 scripts/start-prod.cjs
+            healthCheckPath: /login
+            envVars:
+              - key: NODE_VERSION
+                value: "22"
+              - key: HOST
+                value: "0.0.0.0"
+              - key: APP_SERVICE
+                value: frontend
+              - key: NEXT_PUBLIC_DEMO_MODE
+                value: "false"
+              - key: INTERNAL_API_URL
+                value: https://tivonixpanel-backend.onrender.com
+              - key: NEXT_PUBLIC_SUPABASE_URL
+                sync: false
+              - key: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+                sync: false
+              - key: SUPABASE_URL
+                sync: false
+              - key: SUPABASE_PUBLISHABLE_KEY
+                sync: false
+              - key: ADMIN_EMAIL
+                sync: false
+              - key: APP_URL
+                sync: false
+              - key: NEXT_PUBLIC_APP_URL
+                sync: false

@@ -7,43 +7,54 @@ export const partnerRegisterSchema = z
     fullName: z
       .string()
       .trim()
-      .min(2, "Укажите имя и фамилию")
-      .max(120, "Слишком длинное имя"),
-    agencyName: z.string().trim().max(160, "Слишком длинное название").optional().nullable(),
+      .min(2, "Enter your first and last name")
+      .max(120, "Name is too long"),
+    agencyName: z.preprocess(
+      (v) => (typeof v === "string" ? v.trim() : v),
+      z.string().max(160, "Name is too long").optional().nullable()
+    ),
     telegram: z
       .string()
       .trim()
-      .min(2, "Укажите Telegram")
-      .max(64, "Слишком длинный Telegram")
-      .regex(/^@?[A-Za-z0-9_]{4,}$|^https?:\/\/t\.me\/[A-Za-z0-9_]{4,}/i, "Некорректный Telegram"),
+      .min(2, "Enter your Telegram")
+      .max(64, "Telegram is too long")
+      .regex(
+        /^(?:@)?[A-Za-z0-9_]{4,32}$|^(?:https?:\/\/)?(?:t\.me|telegram\.me)\/[A-Za-z0-9_]{4,32}\/?$/i,
+        "Enter @username or t.me/username"
+      ),
     email: z
       .string()
       .trim()
-      .email("Некорректный email")
       .max(255)
+      .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Enter a valid email")
       .transform((v) => v.toLowerCase()),
-    websiteUrl: z
-      .string()
-      .trim()
-      .max(500)
-      .optional()
-      .nullable()
-      .transform((v) => (v && v.length > 0 ? v : null))
-      .refine((v) => v === null || /^https?:\/\//i.test(v) || /^[\w.-]+\.[\w.-]+/.test(v), {
-        message: "Укажите корректную ссылку",
-      }),
+    websiteUrl: z.preprocess(
+      (v) => {
+        if (v == null || v === "") return null;
+        if (typeof v !== "string") return v;
+        const trimmed = v.trim();
+        return trimmed.length > 0 ? trimmed : null;
+      },
+      z
+        .string()
+        .max(500)
+        .nullable()
+        .refine((v) => v === null || /^https?:\/\//i.test(v) || /^[\w.-]+\.[\w.-]+/.test(v), {
+          message: "Enter a valid URL",
+        })
+    ),
     password: z
       .string()
-      .min(8, "Пароль — минимум 8 символов")
-      .max(128, "Пароль слишком длинный"),
-    confirmPassword: z.string().min(8, "Повторите пароль").max(128),
+      .min(8, "Password must be at least 8 characters")
+      .max(128, "Password is too long"),
+    confirmPassword: z.string().min(8, "Confirm your password").max(128),
     partnerType: partnerTypeSchema,
     acceptTerms: z.boolean().refine((v) => v === true, {
-      message: "Необходимо принять условия и политику конфиденциальности",
+      message: "You must accept the terms and privacy policy",
     }),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Пароли не совпадают",
+    message: "Passwords do not match",
     path: ["confirmPassword"],
   });
 

@@ -23,15 +23,16 @@ export async function proxyApiToBackend(request: NextRequest): Promise<NextRespo
   if (host) headers.set("x-forwarded-host", host);
   headers.set("x-forwarded-proto", request.nextUrl.protocol.replace(":", ""));
 
-  const init: RequestInit & { duplex?: "half" } = {
+  const init: RequestInit = {
     method: request.method,
     headers,
     redirect: "manual",
   };
 
   if (request.method !== "GET" && request.method !== "HEAD") {
-    init.body = request.body;
-    init.duplex = "half";
+    // Buffer the body so the frontend→API proxy works on Render/Edge
+    // (streaming + duplex is unreliable across that hop).
+    init.body = await request.arrayBuffer();
   }
 
   const backendResponse = await fetch(targetUrl, init);

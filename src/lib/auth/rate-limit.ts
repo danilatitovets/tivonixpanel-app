@@ -2,7 +2,7 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const REGISTER_LIMIT = 5;
+const REGISTER_LIMIT = 30;
 const REGISTER_WINDOW_SECONDS = 15 * 60;
 const LOGIN_LIMIT = 10;
 const LOGIN_WINDOW_SECONDS = 15 * 60;
@@ -41,7 +41,8 @@ export async function allowRegisterAttempt(
 
     if (error) {
       console.error("[rate-limit] check failed", error.code, error.message);
-      return { allowed: false, retryAfterSeconds: REGISTER_WINDOW_SECONDS };
+      // Fail open: a missing RPC must not block partner applications.
+      return { allowed: true, retryAfterSeconds: 0 };
     }
 
     if (data !== true) {

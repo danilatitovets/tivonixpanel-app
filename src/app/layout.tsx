@@ -22,12 +22,15 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TIVONIX Partners — CRM для партнёров",
-  description: "Панель TIVONIX Partners для работы с клиентами партнёров",
+  title: "TIVONIX Partners — Partner CRM",
+  description: "TIVONIX Partners panel for managing partner clients",
   icons: {
-    icon: "/images/favikon.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "48x48" },
+      { url: "/images/favikon.png", type: "image/png", sizes: "512x512" },
+    ],
     shortcut: "/images/favikon.png",
-    apple: "/images/favikon.png",
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
   },
 };
 
@@ -38,7 +41,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="ru"
+      lang="en"
       className={`${interTight.variable} ${jetbrainsMono.variable} h-full`}
       suppressHydrationWarning
     >

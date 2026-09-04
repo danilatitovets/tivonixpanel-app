@@ -3,38 +3,38 @@ import { NextResponse } from "next/server";
 import type { ZodError } from "zod";
 
 const FIELD_LABELS: Record<string, string> = {
-  fullName: "ФИО",
+  fullName: "Full name",
   email: "Email",
   telegram: "Telegram",
-  phone: "Телефон",
-  password: "Пароль",
-  confirmPassword: "Повтор пароля",
-  partnerType: "Тип партнёрства",
-  acceptTerms: "Согласие с условиями",
-  agencyName: "Агентство",
-  websiteUrl: "Сайт",
+  phone: "Phone",
+  password: "Password",
+  confirmPassword: "Confirm password",
+  partnerType: "Partnership type",
+  acceptTerms: "Terms acceptance",
+  agencyName: "Agency",
+  websiteUrl: "Website",
 };
 
 function translateIssueMessage(message: string): string {
   const exact: Record<string, string> = {
-    Required: "Обязательное поле",
-    "Invalid email": "Введите корректный email",
+    Required: "Required field",
+    "Invalid email": "Enter a valid email",
     "Invalid option: expected one of \"referral\"|\"white_label\"":
-      "Выберите тип партнёрства",
-    "Invalid input: expected string, received undefined": "Заполните поле",
-    "Invalid input: expected boolean, received undefined": "Необходимо принять условие",
+      "Select a partnership type",
+    "Invalid input: expected string, received undefined": "Fill in this field",
+    "Invalid input: expected boolean, received undefined": "You must accept this condition",
   };
   if (exact[message]) return exact[message];
-  if (/expected string/i.test(message)) return "Заполните поле";
-  if (/expected boolean/i.test(message)) return "Необходимо принять условие";
-  if (/Invalid email/i.test(message)) return "Введите корректный email";
+  if (/expected string/i.test(message)) return "Fill in this field";
+  if (/expected boolean/i.test(message)) return "You must accept this condition";
+  if (/Invalid email/i.test(message)) return "Enter a valid email";
   if (/at least (\d+)/i.test(message)) {
     const n = message.match(/at least (\d+)/i)?.[1];
-    return `Минимум ${n} символов`;
+    return `At least ${n} characters`;
   }
-  if (/Invalid option/i.test(message)) return "Выберите значение из списка";
-  if (/Invalid literal/i.test(message)) return "Необходимо принять условие";
-  return "Проверьте значение поля";
+  if (/Invalid option/i.test(message)) return "Select a value from the list";
+  if (/Invalid literal/i.test(message)) return "You must accept this condition";
+  return message;
 }
 
 export function zodToFieldErrors(error: ZodError): Record<string, string> {
@@ -53,7 +53,7 @@ export function validationErrorResponse(error: ZodError, status = 400) {
   const firstField = Object.keys(fieldErrors)[0];
   const firstMessage = firstField
     ? `${FIELD_LABELS[firstField] ?? firstField}: ${fieldErrors[firstField]}`
-    : "Проверьте введённые данные";
+    : "Please check the entered data";
 
   return NextResponse.json(
     {

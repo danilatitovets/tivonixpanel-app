@@ -68,22 +68,22 @@ async function recordRegistrationConsents(userId: string) {
 export async function POST(request: Request) {
   const contentLength = Number(request.headers.get("content-length") ?? "0");
   if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
-    return safeClientError("Слишком большой запрос", 413);
+    return safeClientError("Request too large", 413);
   }
 
   let body: unknown;
   try {
     const raw = await request.text();
     if (raw.length > MAX_BODY_BYTES) {
-      return safeClientError("Слишком большой запрос", 413);
+      return safeClientError("Request too large", 413);
     }
     body = raw ? JSON.parse(raw) : null;
   } catch {
-    return safeClientError("Некорректный запрос", 400);
+    return safeClientError("Invalid request", 400);
   }
 
   if (!body || typeof body !== "object") {
-    return safeClientError("Некорректный запрос", 400);
+    return safeClientError("Invalid request", 400);
   }
 
   // Strip privilege-escalation attempts before validation
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
   const rate = await allowRegisterAttempt(request, email);
   if (!rate.allowed) {
     return NextResponse.json(
-      { error: "Слишком много попыток. Подождите 15 минут и попробуйте снова" },
+      { error: "Too many attempts. Wait a few minutes and try again" },
       {
         status: 429,
         headers: { "Retry-After": String(rate.retryAfterSeconds) },
@@ -131,7 +131,7 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (existingProfile) {
-      return safeClientError("Пользователь с таким email уже зарегистрирован", 409);
+      return safeClientError("A user with this email is already registered", 409);
     }
 
     const supabase = await createClient();
@@ -156,29 +156,29 @@ export async function POST(request: Request) {
     if (signUpError) {
       const msg = signUpError.message.toLowerCase();
       if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
-        return safeClientError("Пользователь с таким email уже зарегистрирован", 409);
+        return safeClientError("A user with this email is already registered", 409);
       }
       if (msg.includes("rate limit")) {
         return NextResponse.json(
-          { error: "Слишком много попыток. Подождите и попробуйте снова" },
+          { error: "Too many attempts. Wait and try again" },
           { status: 429, headers: { "Retry-After": "60" } }
         );
       }
       return safeClientError(
-        toUserMessage(signUpError.message, "Не удалось создать аккаунт"),
+        toUserMessage(signUpError.message, "Could not create account"),
         400
       );
     }
 
     const userId = signedUp.user?.id;
     if (!userId) {
-      return safeClientError("Не удалось создать аккаунт", 500);
+      return safeClientError("Could not create account", 500);
     }
 
     // Supabase may return a user without identities when email already exists (anti-enumeration)
     const identities = signedUp.user?.identities ?? [];
     if (Array.isArray(identities) && identities.length === 0) {
-      return safeClientError("Пользователь с таким email уже зарегистрирован", 409);
+      return safeClientError("A user with this email is already registered", 409);
     }
 
     let profileUpdated = false;
@@ -202,9 +202,32 @@ export async function POST(request: Request) {
 
       if (profileErr) {
         console.error("[register] profile update failed", profileErr.code);
-        return safeClientError("Не удалось сохранить заявку", 500);
+        return safeClientError("Could not save application", 500);
       }
       profileUpdated = Boolean(updatedRows && updatedRows.length > 0);
+    }
+
+    if (!profileUpdated) {
+      const { data: insertedRows, error: insertErr } = await admin
+        .from("profiles")
+        .insert({
+          user_id: userId,
+          full_name: input.fullName,
+          email,
+          telegram,
+          agency_name: agencyName,
+          website_url: websiteUrl,
+          partner_type: input.partnerType,
+          role: "partner",
+          status: "pending",
+        })
+        .select("id");
+
+      if (insertErr) {
+        console.error("[register] profile insert failed", insertErr.code);
+      } else {
+        profileUpdated = Boolean(insertedRows && insertedRows.length > 0);
+      }
     }
 
     if (!profileUpdated) {
@@ -217,7 +240,7 @@ export async function POST(request: Request) {
           cleanupErr instanceof Error ? cleanupErr.message : "unknown"
         );
       }
-      return safeClientError("Не удалось сохранить заявку. Попробуйте ещё раз", 500);
+      return safeClientError("Could not save application. Please try again", 500);
     }
 
     try {
@@ -282,6 +305,6 @@ export async function POST(request: Request) {
       "[register] unexpected error",
       err instanceof Error ? err.message : "unknown"
     );
-    return safeClientError("Не удалось отправить заявку", 500);
+    return safeClientError("Could not submit application", 500);
   }
 }

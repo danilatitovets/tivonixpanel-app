@@ -34,16 +34,16 @@ const PARTNER_OPTIONS: {
 }[] = [
   {
     type: "referral",
-    title: "Referral-партнёр",
+    title: "Referral partner",
     description:
-      "Передаёте клиента TIVONIX. Мы оцениваем проект, заключаем сделку и выполняем работу. После оплаты заказа вы получаете партнёрское вознаграждение.",
+      "You refer a client to TIVONIX. We evaluate the project, close the deal, and do the work. After the order is paid, you receive a partner commission.",
     image: "/images/1.png",
   },
   {
     type: "white_label",
     title: "White-label",
     description:
-      "Вы ведёте клиента, продаёте разработку под своим брендом и назначаете конечную цену. TIVONIX выполняет техническую часть и не выходит к клиенту без согласования.",
+      "You own the client relationship, sell development under your brand, and set the final price. TIVONIX handles the technical work and does not contact the client without approval.",
     image: "/images/2.png",
   },
 ];
@@ -73,6 +73,14 @@ const initialForm: FormState = {
   acceptTerms: false,
 };
 
+function firstFieldError(value: unknown): string | undefined {
+  if (typeof value === "string" && value.trim()) return value;
+  if (Array.isArray(value) && typeof value[0] === "string" && value[0].trim()) {
+    return value[0];
+  }
+  return undefined;
+}
+
 function parsePartnerTypeParam(raw: string | null): PartnerType | null {
   if (raw === "referral" || raw === "white_label") return raw;
   return null;
@@ -83,7 +91,7 @@ export function RegisterForm() {
     <Suspense
       fallback={
         <div className="mx-auto max-w-[420px] py-20 text-center text-sm text-[var(--color-zinc-gray)]">
-          Загрузка…
+          Loading…
         </div>
       }
     >
@@ -122,19 +130,31 @@ function RegisterFormInner() {
     setPartnerType(null);
     setError(null);
     setFieldErrors({});
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("type");
+    params.delete("partner_type");
+    const qs = params.toString();
+    router.replace(qs ? `/register?${qs}` : "/register", { scroll: false });
+  }
+
+  function selectPartnerType(type: PartnerType) {
+    setPartnerType(type);
+    setError(null);
+    setFieldErrors({});
+    router.replace(`/register?type=${type}`, { scroll: false });
   }
 
   function validateClient(): string | null {
-    if (!partnerType) return "Выберите формат сотрудничества";
+    if (!partnerType) return "Select a partnership format";
     if (!form.fullName.trim() || form.fullName.trim().length < 2) {
-      return "Укажите имя и фамилию";
+      return "Enter your first and last name";
     }
-    if (!form.telegram.trim()) return "Укажите Telegram";
-    if (!form.email.trim()) return "Укажите email";
-    if (form.password.length < 8) return "Пароль — минимум 8 символов";
-    if (form.password !== form.confirmPassword) return "Пароли не совпадают";
+    if (!form.telegram.trim()) return "Enter Telegram";
+    if (!form.email.trim()) return "Enter email";
+    if (form.password.length < 8) return "Password must be at least 8 characters";
+    if (form.password !== form.confirmPassword) return "Passwords do not match";
     if (!form.acceptTerms) {
-      return "Необходимо принять условия и политику конфиденциальности";
+      return "You must accept the terms and privacy policy";
     }
     return null;
   }
@@ -170,7 +190,7 @@ function RegisterFormInner() {
 
       const json = (await res.json().catch(() => ({}))) as {
         error?: string;
-        fieldErrors?: Record<string, string[]>;
+        fieldErrors?: Record<string, string[] | string>;
         data?: { needsEmailConfirmation?: boolean };
       };
 
@@ -178,11 +198,12 @@ function RegisterFormInner() {
         if (json.fieldErrors) {
           const mapped: Record<string, string> = {};
           for (const [key, messages] of Object.entries(json.fieldErrors)) {
-            if (messages?.[0]) mapped[key] = messages[0];
+            const text = firstFieldError(messages);
+            if (text) mapped[key] = text;
           }
           setFieldErrors(mapped);
         }
-        throw new Error(json.error ?? "Не удалось отправить заявку");
+        throw new Error(json.error ?? "Could not submit application");
       }
 
       if (json.data?.needsEmailConfirmation) {
@@ -193,7 +214,7 @@ function RegisterFormInner() {
         router.refresh();
       }
     } catch (err) {
-      setError(toUserMessage(err, "Не удалось отправить заявку"));
+      setError(toUserMessage(err, "Could not submit application"));
     } finally {
       setLoading(false);
     }
@@ -206,21 +227,21 @@ function RegisterFormInner() {
           <Check className="size-5 text-[var(--color-sunrise-coral)]" strokeWidth={2} />
         </div>
         <h2 className="text-[22px] font-normal leading-[1.25] tracking-[-0.012em] text-[var(--color-carbon-black)]">
-          Подтвердите email
+          Confirm your email
         </h2>
         <p className="mt-3 text-[15px] leading-[1.5] tracking-[-0.005em] text-[var(--color-zinc-gray)]">
-          Мы отправили письмо на {form.email}. Перейдите по ссылке, затем войдите — заявка будет на
-          проверке.
+          We sent an email to {form.email}. Open the link, then sign in — your application will be
+          under review.
         </p>
         <Link href="/login" className={cn(authPrimaryBtnClass, "mt-7")}>
-          Перейти ко входу
+          Go to sign in
           <ArrowRight className="size-4" strokeWidth={2} />
         </Link>
       </div>
     );
   }
 
-  const partnerLabel = partnerType === "referral" ? "Referral-партнёр" : "White-label";
+  const partnerLabel = partnerType === "referral" ? "Referral partner" : "White-label";
 
   return (
     <div className="mx-auto w-full max-w-3xl">
@@ -228,10 +249,10 @@ function RegisterFormInner() {
         <p className="mb-3 font-[family-name:var(--font-auth-mono)] text-[11px] uppercase tracking-[-0.006em] text-[var(--color-ash-gray)]">
           TIVONIX Partners
         </p>
-        <h1 className={authHeadingClass}>Стать партнёром TIVONIX</h1>
+        <h1 className={authHeadingClass}>Become a TIVONIX partner</h1>
         <p className={authSubheadClass}>
-          Выберите формат сотрудничества и отправьте заявку. После проверки мы откроем вам доступ к
-          партнёрской панели.
+          Choose a partnership format and submit your application. After review, we will open
+          access to the partner panel.
         </p>
       </div>
 
@@ -242,7 +263,7 @@ function RegisterFormInner() {
             <button
               key={option.type}
               type="button"
-              onClick={() => setPartnerType(option.type)}
+              onClick={() => selectPartnerType(option.type)}
               aria-pressed={selected}
               className={cn(
                 "relative overflow-hidden rounded-[15px] border text-left outline-none transition-all focus-visible:ring-[3px] focus-visible:ring-[var(--color-sunrise-coral)]/25",
@@ -251,11 +272,7 @@ function RegisterFormInner() {
                   : "border-[var(--color-mist-gray)] hover:border-[var(--color-ash-gray)]"
               )}
             >
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-0 scale-110 bg-[url('/images/fon-hero.png')] bg-cover bg-center opacity-80 blur-[14px]"
-              />
-              <div className="relative bg-[var(--color-paper-white)]/80">
+              <div className="relative bg-[var(--color-paper-white)]">
                 <div
                   className="relative aspect-[16/10] w-full"
                   style={{
@@ -291,35 +308,37 @@ function RegisterFormInner() {
       </div>
 
       <p className="mt-10 text-center text-[13px] text-[var(--color-zinc-gray)]">
-        Уже зарегистрированы?{" "}
+        Already registered?{" "}
         <Link href="/login" className={cn(authGhostLinkClass, "font-bold text-[var(--color-carbon-black)]")}>
-          Войти
+          Sign in
         </Link>
       </p>
 
       <Dialog open={modalOpen} onOpenChange={(open) => !open && closeModal()}>
         <DialogContent
-          className={cn(
-            "max-h-[min(96dvh,900px)] gap-0 overflow-hidden border-0 p-0 shadow-[0_24px_80px_rgba(24,24,27,0.18)] sm:max-w-2xl",
-            "bg-[var(--color-paper-white)] ring-0"
-          )}
+          placement="bottom"
+          className="gap-0 overflow-hidden p-0 shadow-[0_24px_80px_rgba(24,24,27,0.18)] ring-0"
         >
-          <div className="px-6 pt-5 pb-1 sm:px-8">
+          <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-[var(--color-mist-gray)] sm:hidden" />
+          <div className="shrink-0 px-6 pt-4 pb-1 sm:px-8 sm:pt-5">
             <DialogHeader>
-              <DialogTitle className="font-normal">Заявка на партнёрство</DialogTitle>
+              <DialogTitle className="font-normal">Partnership application</DialogTitle>
               <DialogDescription>
-                Выбранный формат:{" "}
+                Selected format:{" "}
                 <span className="font-bold text-[var(--color-carbon-black)]">{partnerLabel}</span>
               </DialogDescription>
             </DialogHeader>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-2.5 px-6 pb-6 pt-2 sm:px-8">
+          <form
+            onSubmit={handleSubmit}
+            className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2 sm:px-8 sm:pb-6"
+          >
             <input type="hidden" name="partnerType" value={partnerType ?? ""} />
 
             <div className="space-y-1.5">
               <label htmlFor="reg-full-name" className={authLabelClass}>
-                Имя и фамилия
+                Full name
               </label>
               <input
                 id="reg-full-name"
@@ -328,7 +347,7 @@ function RegisterFormInner() {
                 value={form.fullName}
                 onChange={(e) => updateField("fullName", e.target.value)}
                 className={modalInputClass}
-                placeholder="Иван Иванов"
+                placeholder="John Smith"
               />
               {fieldErrors.fullName && (
                 <p className="text-[11px] text-[var(--color-sunrise-coral)]">{fieldErrors.fullName}</p>
@@ -338,8 +357,8 @@ function RegisterFormInner() {
             <div className="grid gap-2.5 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <label htmlFor="reg-agency" className={authLabelClass}>
-                  Агентство / бренд{" "}
-                  <span className="text-[var(--color-ash-gray)]">(необяз.)</span>
+                  Agency / brand{" "}
+                  <span className="text-[var(--color-ash-gray)]">(optional)</span>
                 </label>
                 <input
                   id="reg-agency"
@@ -352,8 +371,8 @@ function RegisterFormInner() {
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="reg-website" className={authLabelClass}>
-                  Сайт{" "}
-                  <span className="text-[var(--color-ash-gray)]">(необяз.)</span>
+                  Website{" "}
+                  <span className="text-[var(--color-ash-gray)]">(optional)</span>
                 </label>
                 <input
                   id="reg-website"
@@ -406,7 +425,7 @@ function RegisterFormInner() {
             <div className="grid gap-2.5 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <label htmlFor="reg-password" className={authLabelClass}>
-                  Пароль
+                  Password
                 </label>
                 <input
                   id="reg-password"
@@ -417,7 +436,7 @@ function RegisterFormInner() {
                   value={form.password}
                   onChange={(e) => updateField("password", e.target.value)}
                   className={modalInputClass}
-                  placeholder="Минимум 8 символов"
+                  placeholder="At least 8 characters"
                 />
                 {fieldErrors.password && (
                   <p className="text-[11px] text-[var(--color-sunrise-coral)]">{fieldErrors.password}</p>
@@ -425,7 +444,7 @@ function RegisterFormInner() {
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="reg-confirm" className={authLabelClass}>
-                  Повтор пароля
+                  Confirm password
                 </label>
                 <input
                   id="reg-confirm"
@@ -436,7 +455,7 @@ function RegisterFormInner() {
                   value={form.confirmPassword}
                   onChange={(e) => updateField("confirmPassword", e.target.value)}
                   className={modalInputClass}
-                  placeholder="Повторите пароль"
+                  placeholder="Enter password again"
                 />
                 {fieldErrors.confirmPassword && (
                   <p className="text-[11px] text-[var(--color-sunrise-coral)]">
@@ -451,43 +470,43 @@ function RegisterFormInner() {
                 checked={form.acceptTerms}
                 onCheckedChange={(checked) => updateField("acceptTerms", checked === true)}
                 className="mt-0.5 border-[var(--color-mist-gray)] data-checked:border-[var(--color-sunrise-coral)] data-checked:bg-[var(--color-sunrise-coral)]"
-                aria-label="Принять условия"
+                aria-label="Accept terms"
               />
               <span className="text-[13px] leading-[1.45] text-[var(--color-zinc-gray)]">
-                Принимаю{" "}
+                I accept the{" "}
                 <Link
                   href="/legal/terms"
                   className="text-[var(--color-carbon-black)] underline-offset-2 hover:underline"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  условия
+                  terms
                 </Link>{" "}
-                и{" "}
+                and{" "}
                 <Link
                   href="/legal/privacy"
                   className="text-[var(--color-carbon-black)] underline-offset-2 hover:underline"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  политику конфиденциальности
+                  privacy policy
                 </Link>
-                . Версии документов фиксируются при отправке заявки.
+                . Document versions are recorded when you submit.
               </span>
             </label>
 
             {error && <div className={cn(authErrorClass, "border-0")}>{error}</div>}
 
             <button type="submit" disabled={loading} className={cn(authPrimaryBtnClass, "h-11")}>
-              {loading ? "Отправка…" : "Отправить заявку"}
+              {loading ? "Submitting…" : "Submit application"}
               {!loading && <ArrowRight className="size-4" strokeWidth={2} />}
             </button>
 
             <p className="text-center text-[13px] text-[var(--color-zinc-gray)]">
-              Уже зарегистрированы?{" "}
+              Already registered?{" "}
               <Link
                 href="/login"
                 className={cn(authGhostLinkClass, "font-bold text-[var(--color-carbon-black)]")}
               >
-                Войти
+                Sign in
               </Link>
             </p>
           </form>
