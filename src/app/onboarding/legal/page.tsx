@@ -66,6 +66,8 @@ export default function LegalOnboardingPage() {
       acceptPartnerAgreement: fd.get("acceptPartnerAgreement") === "on",
       acceptCommissionRules: fd.get("acceptCommissionRules") === "on",
       acceptCookies: fd.get("acceptCookies") === "on",
+      password,
+      confirmPassword,
     };
 
     const res = await fetch("/api/onboarding/legal", {
@@ -74,30 +76,33 @@ export default function LegalOnboardingPage() {
       body: JSON.stringify(payload),
     });
 
-    if (res.status === 403) {
+    const data = await res.json().catch(() => ({}));
+
+    if (res.status === 403 && (data.blocked || data.reason === "under_16")) {
       router.push("/blocked");
       return;
     }
 
     if (!res.ok) {
-      const data = await res.json();
       setError(toUserMessage(data.error, "Не удалось сохранить данные"));
       setLoading(false);
       return;
     }
 
-    const pwRes = await fetch("/api/auth/set-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password, confirmPassword }),
-    });
+    if (!data.passwordSet) {
+      const pwRes = await fetch("/api/auth/set-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password, confirmPassword }),
+      });
 
-    const pwData = await pwRes.json().catch(() => ({}));
+      const pwData = await pwRes.json().catch(() => ({}));
 
-    if (!pwRes.ok) {
-      setError(toUserMessage(pwData.error, "Не удалось сохранить пароль"));
-      setLoading(false);
-      return;
+      if (!pwRes.ok) {
+        setError(toUserMessage(pwData.error, "Не удалось сохранить пароль"));
+        setLoading(false);
+        return;
+      }
     }
 
     await fetch("/api/auth/me");

@@ -3,10 +3,10 @@ import { z } from "zod";
 const MIN_AGE = 16;
 
 export const legalOnboardingSchema = z.object({
-  fullName: z.string().min(2).max(120),
-  email: z.string().email().max(255),
-  city: z.string().max(120).optional().nullable(),
-  country: z.string().min(2).max(120),
+  fullName: z.string().trim().min(2).max(120),
+  email: z.string().trim().email().max(255),
+  city: z.string().trim().max(120).optional().nullable(),
+  country: z.string().trim().min(2).max(120),
   dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   unp: z.string().max(32).optional().nullable(),
   organizationName: z.string().max(200).optional().nullable(),
@@ -21,7 +21,8 @@ export const legalOnboardingSchema = z.object({
 });
 
 export function calculateAge(dateOfBirth: string): number {
-  const dob = new Date(dateOfBirth);
+  const [year, month, day] = dateOfBirth.split("-").map(Number);
+  const dob = new Date(year, month - 1, day);
   const today = new Date();
   let age = today.getFullYear() - dob.getFullYear();
   const m = today.getMonth() - dob.getMonth();
