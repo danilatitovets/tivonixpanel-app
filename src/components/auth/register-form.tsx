@@ -3,16 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useMemo, useState } from "react";
-import { ArrowRight, Check } from "lucide-react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import { ArrowRight, Check, X } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toUserMessage } from "@/lib/errors";
 import type { PartnerType } from "@/lib/types";
@@ -114,7 +108,26 @@ function RegisterFormInner() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState<"pending" | "confirm_email" | null>(null);
 
+  const [mounted, setMounted] = useState(false);
   const modalOpen = partnerType !== null && done !== "confirm_email";
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!modalOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeModal();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [modalOpen]);
 
   function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -314,28 +327,50 @@ function RegisterFormInner() {
         </Link>
       </p>
 
-      <Dialog open={modalOpen} onOpenChange={(open) => !open && closeModal()}>
-        <DialogContent
-          placement="bottom"
-          className="gap-0 overflow-hidden p-0 shadow-[0_24px_80px_rgba(24,24,27,0.18)] ring-0"
-        >
-          <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-[var(--color-mist-gray)] sm:hidden" />
-          <div className="shrink-0 px-6 pt-4 pb-1 sm:px-8 sm:pt-5">
-            <DialogHeader>
-              <DialogTitle className="font-normal">Partnership application</DialogTitle>
-              <DialogDescription>
+      {mounted &&
+        modalOpen &&
+        createPortal(
+        <div className="fixed inset-0 z-50">
+          <button
+            type="button"
+            className="absolute inset-0 bg-[var(--color-carbon-black)]/25 supports-backdrop-filter:backdrop-blur-[2px]"
+            aria-label="Закрыть"
+            onClick={closeModal}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="register-sheet-title"
+            data-slot="sheet-content"
+            data-side="bottom"
+            className="register-sheet absolute inset-x-0 bottom-0 z-10 flex max-h-[min(92dvh,920px)] w-full flex-col overflow-hidden rounded-t-[20px] bg-[var(--color-paper-white)] shadow-[0_24px_80px_rgba(24,24,27,0.18)] md:inset-auto md:left-1/2 md:top-1/2 md:bottom-auto md:w-[min(42rem,calc(100%-2rem))] md:max-h-[min(90vh,900px)] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-[15px]"
+          >
+            <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-[var(--color-mist-gray)] sm:hidden" />
+            <div className="relative shrink-0 px-6 pt-4 pb-1 sm:px-8 sm:pt-5">
+              <p id="register-sheet-title" className="pr-10 text-[19px] font-normal leading-[1.25] tracking-[-0.012em] text-[var(--color-carbon-black)]">
+                Partnership application
+              </p>
+              <p className="mt-1 text-[14px] leading-[1.45] tracking-[-0.005em] text-[var(--color-zinc-gray)]">
                 Selected format:{" "}
                 <span className="font-bold text-[var(--color-carbon-black)]">{partnerLabel}</span>
-              </DialogDescription>
-            </DialogHeader>
-          </div>
+              </p>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="absolute top-3 right-3 flex size-9 items-center justify-center rounded-full text-[var(--color-zinc-gray)] hover:bg-[var(--color-fog-gray)] hover:text-[var(--color-carbon-black)]"
+                aria-label="Закрыть"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
 
           <form
             onSubmit={handleSubmit}
-            className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2 sm:px-8 sm:pb-6"
+            className="flex min-h-0 flex-1 flex-col"
           >
             <input type="hidden" name="partnerType" value={partnerType ?? ""} />
 
+            <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain px-6 pt-2 sm:px-8">
             <div className="space-y-1.5">
               <label htmlFor="reg-full-name" className={authLabelClass}>
                 Full name
@@ -494,13 +529,15 @@ function RegisterFormInner() {
             </label>
 
             {error && <div className={cn(authErrorClass, "border-0")}>{error}</div>}
+            </div>
 
+            <div className="shrink-0 border-t border-[var(--color-mist-gray)] bg-[var(--color-paper-white)] px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:px-8 sm:pb-6">
             <button type="submit" disabled={loading} className={cn(authPrimaryBtnClass, "h-11")}>
               {loading ? "Submitting…" : "Submit application"}
               {!loading && <ArrowRight className="size-4" strokeWidth={2} />}
             </button>
 
-            <p className="text-center text-[13px] text-[var(--color-zinc-gray)]">
+            <p className="mt-3 text-center text-[13px] text-[var(--color-zinc-gray)]">
               Already registered?{" "}
               <Link
                 href="/login"
@@ -509,9 +546,12 @@ function RegisterFormInner() {
                 Sign in
               </Link>
             </p>
+            </div>
           </form>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

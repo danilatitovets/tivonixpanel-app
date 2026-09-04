@@ -32,7 +32,11 @@ export async function proxyApiToBackend(request: NextRequest): Promise<NextRespo
   if (request.method !== "GET" && request.method !== "HEAD") {
     // Buffer the body so the frontend→API proxy works on Render/Edge
     // (streaming + duplex is unreliable across that hop).
-    init.body = await request.arrayBuffer();
+    const body = await request.arrayBuffer();
+    init.body = body;
+    if (!headers.has("content-type") && body.byteLength > 0) {
+      headers.set("content-type", "application/json");
+    }
   }
 
   const backendResponse = await fetch(targetUrl, init);

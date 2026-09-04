@@ -188,18 +188,24 @@
   --academy-scroll-offset: calc(var(--app-header-height) + var(--academy-nav-height) + 0.5rem);
 }
 
-@media (max-width: 639px) {
-  [data-slot="dialog-content"][data-placement="bottom"] {
+@media (max-width: 767px) {
+  [data-slot="dialog-content"][data-placement="bottom"],
+  [data-slot="sheet-content"][data-side="bottom"] {
     top: auto !important;
     right: 0 !important;
     bottom: 0 !important;
     left: 0 !important;
     width: 100% !important;
     max-width: none !important;
-    height: min(92dvh, 920px);
-    max-height: min(92dvh, 920px);
+    height: auto !important;
+    max-height: min(92dvh, 920px) !important;
     transform: none !important;
-    border-radius: 20px 20px 0 0;
-    overflow: hidden;
+    border-radius: 20px 20px 0 0 !important;
+    overflow: hidden !important;
+  }
+
+  [data-slot="sheet-overlay"],
+  [data-slot="dialog-overlay"] {
+    overscroll-behavior: none;
   }
 }
