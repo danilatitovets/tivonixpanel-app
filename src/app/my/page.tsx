@@ -99,7 +99,7 @@ export default function MyPage() {
     .reduce((sum, d) => sum + d.commissionAmount, 0);
 
   return (
-    <RoleGuard resource="leads" redirectTo="/dashboard">
+    <RoleGuard>
       <AppLayout title="Мой кабинет" showAddLead={false} showSearch={false} hideTitle>
         <div className="space-y-12 md:space-y-14">
           <PartnerCabinetHero

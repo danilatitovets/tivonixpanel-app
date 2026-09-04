@@ -230,6 +230,16 @@
 }
 
 /* Closed / leftover overlays must never eat clicks on the panel. */
+[data-slot="dialog-overlay"],
+[data-slot="sheet-overlay"] {
+  pointer-events: none !important;
+}
+
+[data-slot="dialog-overlay"][data-open],
+[data-slot="sheet-overlay"][data-open] {
+  pointer-events: auto !important;
+}
+
 [data-slot="dialog-overlay"]:not([data-open]),
 [data-slot="sheet-overlay"]:not([data-open]),
 [data-slot="dialog-content"]:not([data-open]),

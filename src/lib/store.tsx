@@ -251,8 +251,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const me = await loadAuthMe();
     setAuthSession(me);
     setCurrentUserIdState(me.profileId);
-    const payload = await loadBootstrap();
-    setData(payload.data);
+    try {
+      const payload = await loadBootstrap();
+      setData(payload.data);
+    } catch (err) {
+      console.error("[crm] bootstrap refresh failed", err);
+    }
   }, []);
 
   useEffect(() => {
@@ -277,35 +281,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     let cancelled = false;
     (async () => {
-      try {
-        const me = await loadAuthMe();
-        if (cancelled) return;
-        setAuthSession(me);
-        setCurrentUserIdState(me.profileId);
-
+      for (let attempt = 1; attempt <= 4 && !cancelled; attempt++) {
         try {
-          const payload = await loadBootstrap();
+          const me = await loadAuthMe();
           if (cancelled) return;
-          setData(payload.data);
-        } catch (bootstrapErr) {
-          console.error("[crm] bootstrap failed, retrying", bootstrapErr);
+          setAuthSession(me);
+          setCurrentUserIdState(me.profileId);
+
           try {
-            await sleep(900);
-            if (cancelled) return;
             const payload = await loadBootstrap();
             if (cancelled) return;
             setData(payload.data);
-          } catch (retryErr) {
-            console.error("[crm] bootstrap retry failed", retryErr);
+          } catch (bootstrapErr) {
+            console.error("[crm] bootstrap failed", bootstrapErr);
           }
+
+          if (!cancelled) {
+            sessionLoadedRef.current = true;
+            setIsBootstrapping(false);
+          }
+          return;
+        } catch (err) {
+          console.error("[crm] session bootstrap failed", err);
+          const message = err instanceof Error ? err.message : "";
+          if (/войдите в аккаунт|unauthorized/i.test(message) && attempt === 4) {
+            if (!cancelled) window.location.assign("/login");
+            return;
+          }
+          await sleep(400 * attempt);
         }
-      } catch (err) {
-        console.error("[crm] session bootstrap failed", err);
-      } finally {
-        if (!cancelled) {
-          sessionLoadedRef.current = true;
-          setIsBootstrapping(false);
-        }
+      }
+      if (!cancelled) {
+        sessionLoadedRef.current = false;
+        setIsBootstrapping(false);
       }
     })();
 
@@ -313,6 +321,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, [hydrated, demo, pathname]);
+
+  useEffect(() => {
+    if (demo || isPublicAuthSurface(pathname) || authSession) return;
+    const timer = window.setInterval(() => {
+      void refreshFromServer()
+        .then(() => {
+          sessionLoadedRef.current = true;
+          setIsBootstrapping(false);
+        })
+        .catch(() => {
+          /* keep retrying while the panel is open */
+        });
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [authSession, demo, pathname, refreshFromServer]);
 
   useEffect(() => {
     if (hydrated && demo) saveData(data);
@@ -366,7 +389,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const fromData = data.users.find((u) => u.id === authSession.profileId);
     return {
       id: authSession.profileId,
-      name: authSession.fullName ?? fromData?.name ?? authSession.email,
+      name: authSession.fullName?.trim() || fromData?.name?.trim() || authSession.email,
       email: authSession.email,
       telegram: fromData?.telegram ?? "",
       role: authSession.role,

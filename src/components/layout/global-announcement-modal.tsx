@@ -4,12 +4,6 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 const STORAGE_KEY = "tivonix_global_announcement_academy_v3";
 
@@ -52,12 +46,28 @@ export function GlobalAnnouncementModal({ ready }: { ready: boolean }) {
   if (!open) return null;
 
   return (
-    <Dialog open onOpenChange={(visible) => !visible && dismiss()}>
-      <DialogContent
-        showCloseButton
-        className="!flex max-h-[min(92dvh,820px)] w-[calc(100%-2rem)] !max-w-3xl !flex-col gap-0 overflow-hidden rounded-2xl border-0 bg-[#f4f4f5] p-0 text-[#18181b] shadow-2xl ring-0 z-[100] sm:!max-w-4xl [&_[data-slot=dialog-close]]:top-3 [&_[data-slot=dialog-close]]:right-3 [&_[data-slot=dialog-close]]:z-10 [&_[data-slot=dialog-close]]:text-[#18181b]/60 [&_[data-slot=dialog-close]]:hover:bg-[#18181b]/5 [&_[data-slot=dialog-close]]:hover:text-[#18181b]"
+    <div className="fixed inset-0 z-[100] flex items-end justify-center md:items-center" role="presentation">
+      <button
+        type="button"
+        aria-label="Закрыть объявление"
+        className="absolute inset-0 bg-[var(--color-carbon-black)]/25 supports-backdrop-filter:backdrop-blur-[2px]"
+        onClick={dismiss}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="academy-announcement-title"
+        className="relative z-10 flex max-h-[min(92dvh,820px)] w-full max-w-3xl flex-col overflow-hidden rounded-t-2xl bg-[#f4f4f5] text-[#18181b] shadow-2xl md:w-[calc(100%-2rem)] md:rounded-2xl"
       >
         <header className="relative shrink-0 border-b border-[#ebebeb] bg-white px-6 pb-6 pt-10 text-center sm:px-8 sm:pb-7 sm:pt-11">
+          <button
+            type="button"
+            onClick={dismiss}
+            className="absolute top-3 right-3 flex size-9 items-center justify-center rounded-full text-[#18181b]/60 hover:bg-[#18181b]/5 hover:text-[#18181b]"
+            aria-label="Закрыть"
+          >
+            <span className="text-xl leading-none">×</span>
+          </button>
           <Image
             src="/images/tl-Photoroom.png"
             alt="TIVONIX"
@@ -69,12 +79,12 @@ export function GlobalAnnouncementModal({ ready }: { ready: boolean }) {
           <span className="mt-4 inline-flex rounded-full bg-[#f4f4f5] px-3 py-1 text-sm font-medium text-[#18181b]">
             Второе обновление
           </span>
-          <DialogTitle className="mt-4 text-center font-sans text-2xl font-semibold leading-tight tracking-tight text-[#18181b] sm:text-[1.75rem]">
-            How to find clients
-          </DialogTitle>
-          <DialogDescription className="sr-only">
-            Переработали раздел обучения для партнёров TIVONIX
-          </DialogDescription>
+          <h2
+            id="academy-announcement-title"
+            className="mt-4 text-center font-sans text-2xl font-semibold leading-tight tracking-tight text-[#18181b] sm:text-[1.75rem]"
+          >
+            Как искать клиентов
+          </h2>
         </header>
 
         <div className="min-h-0 overflow-y-auto overscroll-y-contain px-6 py-5 sm:px-8 sm:py-6">
@@ -97,8 +107,8 @@ export function GlobalAnnouncementModal({ ready }: { ready: boolean }) {
 
           <p className="mt-5 pb-1 text-center text-base leading-relaxed text-[#71717a]">
             Открой раздел{" "}
-            <Link href="/academy" className="font-medium text-[#18181b] underline underline-offset-2">
-              «How to find clients»
+            <Link href="/academy" onClick={dismiss} className="font-medium text-[#18181b] underline underline-offset-2">
+              «Как искать клиентов»
             </Link>{" "}
             в меню слева — там всё по шагам.
           </p>
@@ -110,7 +120,7 @@ export function GlobalAnnouncementModal({ ready }: { ready: boolean }) {
             onClick={openAcademy}
             className="h-12 w-full rounded-full bg-[var(--color-sunrise-coral)] text-base font-medium text-white transition-colors hover:opacity-90 active:scale-[0.99] sm:h-[3.25rem] sm:text-lg"
           >
-            Open обучение
+            Открыть обучение
           </button>
           <button
             type="button"
@@ -120,7 +130,7 @@ export function GlobalAnnouncementModal({ ready }: { ready: boolean }) {
             Понятно
           </button>
         </footer>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }

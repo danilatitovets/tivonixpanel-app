@@ -107,7 +107,7 @@ export default function AcademyPage() {
   }, []);
 
   return (
-    <RoleGuard resource="leads" redirectTo="/dashboard">
+    <RoleGuard>
       <AppLayout
         title=""
         hideTitle
