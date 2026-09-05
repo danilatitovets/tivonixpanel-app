@@ -1,16 +1,21 @@
-# Keep Render free web services from spinning down.
+# Attempt to keep Render free web services warm.
 # Free instances sleep after ~15 minutes of no traffic.
-# This pings both services every 5 minutes.
 #
-# Note: always-on free hours are limited monthly. For a real always-on panel,
-# upgrade tivonixpanel-web + tivonixpanel-backend to Starter in the Render dashboard.
+# WARNING: GitHub Actions schedule is best-effort and often delayed by hours,
+# so this alone cannot guarantee always-on. For a panel that must stay awake,
+# upgrade tivonixpanel-web + tivonixpanel-backend to Starter in Render.
 
 name: Render keepalive
 
 on:
   schedule:
+    # Every 5 minutes — GitHub may still coalesce / delay heavily.
     - cron: "*/5 * * * *"
   workflow_dispatch:
+
+concurrency:
+  group: render-keepalive
+  cancel-in-progress: false
 
 jobs:
   ping:
@@ -19,7 +24,7 @@ jobs:
     steps:
       - name: Wake API and frontend
         run: |
-          set -e
+          set -euo pipefail
           ping() {
             url="$1"
             echo "GET $url"
@@ -38,6 +43,14 @@ jobs:
           fail=0
           # Wake each service on its own URL. Never hit web /api/health — that used
           # to proxy into the API and 429 the panel during cold start.
-          ping "https://tivonixpanel-backend.onrender.com/api/health" || fail=1
-          ping "https://tivonixpanel-web.onrender.com/login" || fail=1
+          # Hit each URL twice so a cold start + first probe still leaves traffic
+          # on a living process.
+          for url in \
+            "https://tivonixpanel-backend.onrender.com/api/health" \
+            "https://tivonixpanel-web.onrender.com/login"
+          do
+            ping "$url" || fail=1
+            sleep 2
+            ping "$url" || fail=1
+          done
           exit $fail

@@ -2,9 +2,14 @@
 # Frontend + API web services. Database stays on Supabase (not Render Postgres).
 # Secrets (sync: false) are filled in the Dashboard / MCP, never committed.
 #
-# IMPORTANT: plan `free` spins down after ~15 minutes of idle traffic
-# ("SERVICE WAKING UP"). For a panel that must stay awake, set both services
-# to `starter` in the Render Dashboard (Instance Type → Starter).
+# ALWAYS-ON: both services must be on a paid plan (`starter` / `0.5c-512mb`).
+# Free instances spin down after ~15 minutes idle ("SERVICE WAKING UP").
+# GitHub Actions keepalive cannot keep free instances warm — Actions cron
+# often drifts by hours. Blueprint plan alone does not upgrade existing services;
+# change Instance Type → Starter in the Dashboard (or PATCH via Render API),
+# then redeploy.
+#
+# Heap must stay under instance RAM (512 MB on starter): do NOT set 4096 here.
 
 projects:
   - name: tivonixpanel
@@ -68,6 +73,8 @@ projects:
                 value: "false"
               - key: INTERNAL_API_URL
                 value: https://tivonixpanel-backend.onrender.com
+              - key: DATABASE_URL
+                sync: false
               - key: NEXT_PUBLIC_SUPABASE_URL
                 sync: false
               - key: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
