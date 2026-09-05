@@ -81,12 +81,12 @@ function misconfiguredResponse(pathname: string) {
   }
   if (pathname.startsWith("/api/")) {
     return NextResponse.json(
-      { code: "MISCONFIGURED", error: "Сервис временно недоступен", message: "Сервис временно недоступен" },
+      { code: "MISCONFIGURED", error: "Service temporarily unavailable", message: "Service temporarily unavailable" },
       { status: 503 }
     );
   }
   return new NextResponse(
-    `<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"/><title>Сервис недоступен</title></head><body style="font-family:system-ui;padding:2rem"><h1>Сервис временно недоступен</h1><p>Не заданы обязательные переменные окружения Supabase.</p></body></html>`,
+    `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>Service unavailable</title></head><body style="font-family:system-ui;padding:2rem"><h1>Service temporarily unavailable</h1><p>Required Supabase environment variables are not set.</p></body></html>`,
     { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } }
   );
 }
@@ -106,6 +106,15 @@ function demoModeBlockedInProduction(pathname: string) {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Liveness only. Never proxy /api/health to the API service — on Render free
+  // that turns keepalive + client probes into a 429 storm and the panel never loads.
+  if (pathname === "/api/health") {
+    return NextResponse.json({
+      ok: true,
+      service: process.env.APP_SERVICE ?? "full",
+    });
+  }
 
   const demoBlocked = demoModeBlockedInProduction(pathname);
   if (demoBlocked) return demoBlocked;

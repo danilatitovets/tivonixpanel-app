@@ -49,7 +49,7 @@ export function collectServerEnvIssues(): ServerEnvIssue[] {
           "NEXT_PUBLIC_DEMO_MODE=true запрещён в production. Установите false или удалите переменную.",
       });
     }
-    if (!process.env.SUPABASE_SECRET_KEY?.trim()) {
+    if (!process.env.SUPABASE_SECRET_KEY?.trim() && process.env.APP_SERVICE !== "frontend") {
       issues.push({
         code: "MISSING_SUPABASE_SECRET",
         message: "SUPABASE_SECRET_KEY обязателен в production (server-only).",

@@ -233,26 +233,6 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Wait while Render cold-starts the API (free plan spin-up). */
-async function waitForApiReady(isCancelled: () => boolean): Promise<boolean> {
-  for (let attempt = 1; attempt <= 25; attempt++) {
-    if (isCancelled()) return false;
-    try {
-      const res = await fetch("/api/health", { cache: "no-store" });
-      if (res.ok) return true;
-      // 429 while waking — back off harder instead of hammering.
-      if (res.status === 429) {
-        await sleep(5000);
-        continue;
-      }
-    } catch {
-      /* service still waking */
-    }
-    await sleep(attempt < 5 ? 2000 : 3000);
-  }
-  return false;
-}
-
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -266,6 +246,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
   const [isBootstrapping, setIsBootstrapping] = useState(() => !demo);
   const sessionLoadedRef = useRef(false);
+  /** Prevents remount/pathname churn from restarting cold-start bootstrap. */
+  const bootstrapInFlightRef = useRef(false);
 
   const refreshFromServer = useCallback(async () => {
     const me = await loadAuthMe();
@@ -293,20 +275,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     if (isPublicAuthSurface(pathname)) {
       sessionLoadedRef.current = false;
+      bootstrapInFlightRef.current = false;
       queueMicrotask(() => setIsBootstrapping(false));
       return;
     }
 
-    if (sessionLoadedRef.current) return;
+    if (sessionLoadedRef.current || bootstrapInFlightRef.current) return;
+    bootstrapInFlightRef.current = true;
 
     let cancelled = false;
-    const isCancelled = () => cancelled;
     (async () => {
-      // Let free-tier Render finish waking before auth/bootstrap (avoids 429 storms).
-      await waitForApiReady(isCancelled);
-      if (cancelled) return;
-
-      for (let attempt = 1; attempt <= 2 && !cancelled; attempt++) {
+      // No /api/health polling: on Render free tier that proxies into the API
+      // and turns cold-start 429s into a self-inflicted rate-limit storm.
+      for (let attempt = 1; attempt <= 3 && !cancelled; attempt++) {
         try {
           const me = await loadAuthMe();
           if (cancelled) return;
@@ -324,6 +305,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
           if (!cancelled) {
             sessionLoadedRef.current = true;
+            bootstrapInFlightRef.current = false;
             setIsBootstrapping(false);
           }
           return;
@@ -331,15 +313,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
           console.error("[crm] session bootstrap failed", err);
           const message = err instanceof Error ? err.message : "";
           const isUnauthorized = /войдите в аккаунт|unauthorized/i.test(message);
-          const isRateLimited = /слишком много|too many|429/i.test(message);
+          const isRateLimited = /слишком много|too many|429|rate limit/i.test(message);
 
           if (isUnauthorized) {
-            if (!cancelled) window.location.assign("/login");
+            if (!cancelled) {
+              bootstrapInFlightRef.current = false;
+              window.location.assign("/login");
+            }
             return;
           }
 
-          if (attempt < 2) {
-            await sleep(isRateLimited ? 8000 : 2000);
+          if (attempt < 3) {
+            // Long backoff on 429 so we do not keep waking/rate-limiting the API.
+            await sleep(isRateLimited ? 15000 * attempt : 2500 * attempt);
             continue;
           }
         }
@@ -348,6 +334,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!cancelled) {
         // Stop the spinner even on failure so the UI is usable; user can reload.
         sessionLoadedRef.current = true;
+        bootstrapInFlightRef.current = false;
         setIsBootstrapping(false);
       }
     })();

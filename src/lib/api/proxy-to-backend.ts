@@ -59,6 +59,8 @@ export async function proxyApiToBackend(request: NextRequest): Promise<NextRespo
     headers,
     redirect: "manual",
     cache: "no-store",
+    // Wait out a Render free-tier cold start, but do not hang the panel forever.
+    signal: AbortSignal.timeout(55_000),
   };
 
   if (request.method !== "GET" && request.method !== "HEAD") {
@@ -71,15 +73,28 @@ export async function proxyApiToBackend(request: NextRequest): Promise<NextRespo
     }
   }
 
-  let backendResponse = await fetch(targetUrl, init);
-  // Retry 502/503 once. Do not auto-retry 429 — it amplifies rate-limit storms.
-  if ([502, 503].includes(backendResponse.status)) {
-    const wait = retryAfterMs(backendResponse);
-    console.warn(
-      `[api-proxy] ${request.method} ${request.nextUrl.pathname} -> ${backendResponse.status}, retry in ${wait}ms`
-    );
-    await sleep(wait);
+  let backendResponse: Response;
+  try {
     backendResponse = await fetch(targetUrl, init);
+    // Retry 502/503 once. Do not auto-retry 429 — it amplifies rate-limit storms.
+    if ([502, 503].includes(backendResponse.status)) {
+      const wait = retryAfterMs(backendResponse);
+      console.warn(
+        `[api-proxy] ${request.method} ${request.nextUrl.pathname} -> ${backendResponse.status}, retry in ${wait}ms`
+      );
+      await sleep(wait);
+      backendResponse = await fetch(targetUrl, init);
+    }
+  } catch (err) {
+    const aborted =
+      err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
+    console.warn(
+      `[api-proxy] ${request.method} ${request.nextUrl.pathname} -> ${aborted ? "timeout" : "unreachable"}`
+    );
+    return NextResponse.json(
+      { error: aborted ? "API timeout" : "API unreachable" },
+      { status: 503, headers: { "Retry-After": "5" } }
+    );
   }
 
   if (!backendResponse.ok) {

@@ -1,6 +1,6 @@
 # Keep Render free web services from spinning down.
 # Free instances sleep after ~15 minutes of no traffic.
-# This pings both services every 10 minutes.
+# This pings both services every 5 minutes.
 #
 # Note: always-on free hours are limited monthly. For a real always-on panel,
 # upgrade tivonixpanel-web + tivonixpanel-backend to Starter in the Render dashboard.
@@ -9,7 +9,7 @@ name: Render keepalive
 
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -36,6 +36,8 @@ jobs:
           }
 
           fail=0
+          # Wake each service on its own URL. Never hit web /api/health — that used
+          # to proxy into the API and 429 the panel during cold start.
           ping "https://tivonixpanel-backend.onrender.com/api/health" || fail=1
           ping "https://tivonixpanel-web.onrender.com/login" || fail=1
           exit $fail
