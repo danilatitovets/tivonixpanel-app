@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { clearGateCache } from "@/lib/auth/gate-cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireApiUser } from "@/lib/auth/require-api-user";
@@ -197,5 +198,7 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ success: true, crmAccess: true, passwordSet });
+  const res = NextResponse.json({ success: true, crmAccess: true, passwordSet });
+  clearGateCache(res);
+  return res;
 }

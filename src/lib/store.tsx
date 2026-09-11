@@ -324,8 +324,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
 
           if (attempt < 3) {
-            // Long backoff on 429 so we do not keep waking/rate-limiting the API.
-            await sleep(isRateLimited ? 15000 * attempt : 2500 * attempt);
+            // Single-service mode: short backoff. Long waits were for split free-tier 429s.
+            await sleep(isRateLimited ? 4000 * attempt : 800 * attempt);
             continue;
           }
         }

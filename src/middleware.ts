@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { proxyApiToBackend } from "@/lib/api/proxy-to-backend";
-import { updateSession } from "@/lib/supabase/middleware";
-import { createServerClient } from "@supabase/ssr";
+import { clearGateCache, readGateCache, writeGateCache } from "@/lib/auth/gate-cache";
+import { createMiddlewareSupabase, updateSession } from "@/lib/supabase/middleware";
 import {
   getSupabasePublicUrl,
   getSupabasePublishableKey,
@@ -186,28 +186,11 @@ export async function middleware(request: NextRequest) {
     return updateSession(request);
   }
 
-  let response = await updateSession(request);
-
-  const supabase = createServerClient(url, key, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options);
-        });
-      },
-    },
-  });
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Single getUser() for this hop (was doubled via updateSession + second client).
+  const { response, supabase, user } = await createMiddlewareSupabase(request);
 
   if (!user) {
+    clearGateCache(response);
     if (pathname === "/") {
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = "/login";
@@ -222,17 +205,74 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, status")
-    .eq("user_id", user.id)
-    .single();
+  const cached = readGateCache(request, user.id);
+  let role = cached?.role;
+  let status = cached?.status;
+  let crmAccess = cached?.crmAccess;
+  let onboarding = cached?.onboarding ?? null;
+  let mustChangePassword =
+    cached?.mustChangePassword ?? user.user_metadata?.must_change_password === true;
 
-  const role = profile?.role as string | undefined;
-  const status = profile?.status as string | undefined;
+  if (!cached) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, status")
+      .eq("user_id", user.id)
+      .single();
+
+    role = profile?.role as string | undefined;
+    status = profile?.status as string | undefined;
+
+    if (!profile || !status) {
+      if (pathname.startsWith("/pending") || pathname.startsWith("/blocked") || isAuthEntry(pathname)) {
+        return response;
+      }
+      const pending = request.nextUrl.clone();
+      pending.pathname = "/pending";
+      return NextResponse.redirect(pending);
+    }
+
+    let legalCrm = true;
+    let legalOnboarding: string | null = "complete";
+    if (role !== "admin") {
+      const { data: legal } = await supabase
+        .from("user_legal_profiles")
+        .select("crm_access, onboarding_status")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      legalCrm = Boolean(legal?.crm_access);
+      legalOnboarding = (legal?.onboarding_status as string | null) ?? null;
+    }
+
+    crmAccess = role === "admin" ? true : legalCrm;
+    onboarding = role === "admin" ? "complete" : legalOnboarding;
+    mustChangePassword = user.user_metadata?.must_change_password === true;
+
+    const gateReady =
+      role === "admin" ||
+      (status === "active" &&
+        Boolean(crmAccess) &&
+        onboarding !== "not_started" &&
+        onboarding !== "in_progress" &&
+        onboarding !== "requires_reaccept" &&
+        onboarding !== "blocked_under_16" &&
+        !mustChangePassword);
+
+    // Only cache fully-cleared partners/admins so onboarding completion is not sticky-denied.
+    if (gateReady) {
+      writeGateCache(response, {
+        uid: user.id,
+        role: role!,
+        status: status!,
+        crmAccess: Boolean(crmAccess),
+        onboarding,
+        mustChangePassword,
+      });
+    }
+  }
 
   // Profile not ready yet (race after signup) — keep user out of CRM
-  if (!profile || !status) {
+  if (!role || !status) {
     if (pathname.startsWith("/pending") || pathname.startsWith("/blocked") || isAuthEntry(pathname)) {
       return response;
     }
@@ -309,13 +349,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isProtected(pathname)) {
-    const { data: legal } = await supabase
-      .from("user_legal_profiles")
-      .select("crm_access, onboarding_status")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (legal?.onboarding_status === "blocked_under_16") {
+    if (onboarding === "blocked_under_16") {
       const blocked = request.nextUrl.clone();
       blocked.pathname = "/blocked";
       blocked.searchParams.set("reason", "under_16");
@@ -323,19 +357,17 @@ export async function middleware(request: NextRequest) {
     }
 
     const needsOnboarding =
-      !legal ||
-      legal.onboarding_status === "not_started" ||
-      legal.onboarding_status === "in_progress" ||
-      legal.onboarding_status === "requires_reaccept" ||
-      !legal.crm_access;
-
-    const mustChangePassword = user.user_metadata?.must_change_password === true;
+      !onboarding ||
+      onboarding === "not_started" ||
+      onboarding === "in_progress" ||
+      onboarding === "requires_reaccept" ||
+      !crmAccess;
 
     if (needsOnboarding) {
       if (!pathname.startsWith("/onboarding/legal")) {
-        const onboarding = request.nextUrl.clone();
-        onboarding.pathname = "/onboarding/legal";
-        return NextResponse.redirect(onboarding);
+        const onboardingUrl = request.nextUrl.clone();
+        onboardingUrl.pathname = "/onboarding/legal";
+        return NextResponse.redirect(onboardingUrl);
       }
       return response;
     }

@@ -110,6 +110,7 @@ export function Sidebar({ onNavigate, className }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
+              prefetch
               onClick={onNavigate}
               className={cn(
                 "flex items-center gap-3 rounded-[9999px] px-3 py-2.5 text-[13px] tracking-[-0.005em] transition-colors",
