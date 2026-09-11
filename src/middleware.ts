@@ -44,6 +44,8 @@ const PROTECTED_PREFIXES = [
 
 const DEMO_MODE = isDemoModeEnabled();
 const API_ONLY = process.env.APP_SERVICE === "api";
+// Proxy only when explicitly split into frontend+backend. Without INTERNAL_API_URL,
+// /api/** is handled by this same Next.js process (single Render Free service).
 const FRONTEND_API_PROXY =
   process.env.APP_SERVICE === "frontend" && Boolean(process.env.INTERNAL_API_URL?.trim());
 
@@ -110,9 +112,13 @@ export async function middleware(request: NextRequest) {
   // Liveness only. Never proxy /api/health to the API service — on Render free
   // that turns keepalive + client probes into a 429 storm and the panel never loads.
   if (pathname === "/api/health") {
+    const url = getSupabasePublicUrl();
+    const key = getSupabasePublishableKey();
+    const isHealthy = !!(url && key);
     return NextResponse.json({
-      ok: true,
+      ok: isHealthy,
       service: process.env.APP_SERVICE ?? "full",
+      supabaseConfigured: isHealthy,
     });
   }
 

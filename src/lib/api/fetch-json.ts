@@ -2,7 +2,11 @@ import { apiErrorMessage } from "@/lib/errors";
 
 function resolveApiUrl(url: string): string {
   if (url.startsWith("http://") || url.startsWith("https://")) return url;
-  const base = process.env.INTERNAL_API_URL?.replace(/\/$/, "");
+  // Only absolute-proxy in split frontend mode. Single-service (APP_SERVICE=full)
+  // must keep relative /api/** on the same origin — never hit a sleeping backend.
+  const splitFrontend =
+    process.env.APP_SERVICE === "frontend" && Boolean(process.env.INTERNAL_API_URL?.trim());
+  const base = splitFrontend ? process.env.INTERNAL_API_URL?.replace(/\/$/, "") : "";
   if (base && typeof window === "undefined") {
     return `${base}${url.startsWith("/") ? url : `/${url}`}`;
   }

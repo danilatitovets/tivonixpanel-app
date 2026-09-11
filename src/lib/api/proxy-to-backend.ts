@@ -34,9 +34,14 @@ function retryAfterMs(response: Response): number {
 }
 
 export async function proxyApiToBackend(request: NextRequest): Promise<NextResponse> {
-  const apiBase = process.env.INTERNAL_API_URL?.replace(/\/$/, "");
+  const apiBase = process.env.INTERNAL_API_URL?.trim().replace(/\/$/, "");
   if (!apiBase) {
-    return NextResponse.json({ error: "INTERNAL_API_URL not configured" }, { status: 503 });
+    // Single-service mode: do not 503 — caller should not proxy without INTERNAL_API_URL.
+    // Returning 404 avoids silently sending traffic to a dead split backend.
+    return NextResponse.json(
+      { error: "API proxy disabled", message: "INTERNAL_API_URL is not set; handle /api locally" },
+      { status: 404 }
+    );
   }
 
   const targetUrl = `${apiBase}${request.nextUrl.pathname}${request.nextUrl.search}`;
@@ -60,7 +65,8 @@ export async function proxyApiToBackend(request: NextRequest): Promise<NextRespo
     redirect: "manual",
     cache: "no-store",
     // Wait out a Render free-tier cold start, but do not hang the panel forever.
-    signal: AbortSignal.timeout(55_000),
+    // Reduced timeout for better UX - 30 seconds instead of 55
+    signal: AbortSignal.timeout(30_000),
   };
 
   if (request.method !== "GET" && request.method !== "HEAD") {
@@ -91,8 +97,13 @@ export async function proxyApiToBackend(request: NextRequest): Promise<NextRespo
     console.warn(
       `[api-proxy] ${request.method} ${request.nextUrl.pathname} -> ${aborted ? "timeout" : "unreachable"}`
     );
+    // Return a more user-friendly error for frontend to handle
     return NextResponse.json(
-      { error: aborted ? "API timeout" : "API unreachable" },
+      { 
+        error: aborted ? "API timeout" : "API unreachable",
+        message: "Backend service is temporarily unavailable. Please try again later.",
+        retryable: true
+      },
       { status: 503, headers: { "Retry-After": "5" } }
     );
   }
