@@ -17,7 +17,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-dejavu-core
 
-      - name: Build three real-footage thumbnails
+      - name: Build real-footage thumbnails
         shell: bash
         run: |
           set -euo pipefail
@@ -29,6 +29,7 @@ jobs:
           ffmpeg -hide_banner -loglevel error -y -ss 4 -i src/contract.mp4 -frames:v 1 -vf "scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,eq=contrast=1.08:saturation=1.05:brightness=-0.06,drawbox=x=0:y=0:w=1280:h=720:color=black@0.16:t=fill,drawtext=fontfile=$F:text='84 MONTHS?':fontcolor=white:fontsize=118:borderw=7:bordercolor=black:x=55:y=470" -q:v 2 out/thumb_A_84_MONTHS.jpg
           ffmpeg -hide_banner -loglevel error -y -ss 3 -i src/keys.mp4 -frames:v 1 -vf "scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,eq=contrast=1.08:saturation=1.07:brightness=-0.05,drawbox=x=0:y=0:w=1280:h=720:color=black@0.13:t=fill,drawtext=fontfile=$F:text='765 / MO':fontcolor=white:fontsize=124:borderw=7:bordercolor=black:x=55:y=470" -q:v 2 out/thumb_B_765_MO.jpg
           ffmpeg -hide_banner -loglevel error -y -ss 3 -i src/consult.mp4 -frames:v 1 -vf "scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,eq=contrast=1.08:saturation=1.05:brightness=-0.06,drawbox=x=0:y=0:w=1280:h=720:color=black@0.15:t=fill,drawtext=fontfile=$F:text='PAYMENT TRAP':fontcolor=white:fontsize=105:borderw=7:bordercolor=black:x=55:y=480" -q:v 2 out/thumb_C_PAYMENT_TRAP.jpg
+          ffmpeg -hide_banner -loglevel error -y -ss 3 -i src/keys.mp4 -frames:v 1 -vf "scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,eq=contrast=1.10:saturation=1.08:brightness=-0.07,drawbox=x=0:y=390:w=1280:h=330:color=black@0.25:t=fill,drawtext=fontfile=$F:text='84 MONTHS?':fontcolor=white:fontsize=116:borderw=8:bordercolor=black:x=55:y=480" -q:v 2 out/thumb_D_84_MONTHS_KEYS.jpg
 
       - uses: actions/upload-artifact@v4
         with:
