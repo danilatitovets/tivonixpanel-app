@@ -1,0 +1,45 @@
+name: Cost of Normal Stage Thumbnail
+
+on:
+  push:
+    branches: ['cost-of-normal-publish-4k-fast']
+    paths:
+      - '.github/workflows/cost-normal-stage-thumbnail.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      THUMB_RUN: '34842885611'
+      TAG: 'cost-normal-monthly-payment-trap-2026-09-14'
+    steps:
+      - name: Download selected thumbnail artifact
+        run: |
+          mkdir -p thumb
+          gh run download "$THUMB_RUN" --repo "$GITHUB_REPOSITORY" -n cost-normal-thumbnail-variants -D thumb
+          find thumb -type f -maxdepth 2 -print
+          cp thumb/thumb_D_84_MONTHS_KEYS.jpg ./Cost_of_Normal_Monthly_Payment_Trap_Thumbnail.jpg
+
+      - name: Create release or upload thumbnail
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" Cost_of_Normal_Monthly_Payment_Trap_Thumbnail.jpg --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" Cost_of_Normal_Monthly_Payment_Trap_Thumbnail.jpg \
+              --repo "$GITHUB_REPOSITORY" --target cost-of-normal-publish-4k-fast \
+              --title 'Cost of Normal — Monthly Payment Trap — staging' \
+              --notes 'Temporary publication staging assets for the Cost of Normal production pipeline.'
+          fi
+          echo "https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/Cost_of_Normal_Monthly_Payment_Trap_Thumbnail.jpg" | tee thumbnail_url.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cost-normal-thumbnail-staging-url
+          path: thumbnail_url.txt
+          retention-days: 7
