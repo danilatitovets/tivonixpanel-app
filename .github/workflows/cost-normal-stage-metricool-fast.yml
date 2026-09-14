@@ -50,8 +50,9 @@ jobs:
         run: |
           set -euo pipefail
           TAG=cost-normal-monthly-payment-staging-v1
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title 'Cost of Normal staging' --notes 'Temporary staging assets for Metricool ingestion.' --target cost-of-normal-publish-4k-fast
-          gh release upload "$TAG" stage/Cost_of_Normal_Monthly_Payment_Trap_FINAL_NATIVE4K.mp4 stage/Cost_of_Normal_84_MONTHS_thumbnail.jpg stage/probe.json --clobber
+          REPO="$GITHUB_REPOSITORY"
+          gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1 || gh release create "$TAG" --repo "$REPO" --title 'Cost of Normal staging' --notes 'Temporary staging assets for Metricool ingestion.' --target cost-of-normal-publish-4k-fast
+          gh release upload "$TAG" stage/Cost_of_Normal_Monthly_Payment_Trap_FINAL_NATIVE4K.mp4 stage/Cost_of_Normal_84_MONTHS_thumbnail.jpg stage/probe.json --repo "$REPO" --clobber
           echo "VIDEO_URL=https://github.com/${{ github.repository }}/releases/download/$TAG/Cost_of_Normal_Monthly_Payment_Trap_FINAL_NATIVE4K.mp4" | tee stage/urls.txt
           echo "THUMB_URL=https://github.com/${{ github.repository }}/releases/download/$TAG/Cost_of_Normal_84_MONTHS_thumbnail.jpg" | tee -a stage/urls.txt
 
