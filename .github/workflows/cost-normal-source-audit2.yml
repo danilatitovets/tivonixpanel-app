@@ -1,0 +1,77 @@
+name: Cost of Normal Native 4K Source Audit 2
+on:
+  push:
+    branches:
+      - cost-of-normal-publish-4k-fast
+    paths:
+      - .github/workflows/cost-normal-source-audit2.yml
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Install ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg imagemagick
+      - name: Audit second source batch
+        shell: bash
+        run: |
+          set -e
+          mkdir -p clips frames out
+          printf '%s\n' \
+            '6817044 showroom_woman_inspecting' \
+            '6817058 showroom_woman_inside_car' \
+            '12293711 dealership_drone_aerial' \
+            '26542243 luxury_showroom_cars' \
+            '31220482 showroom_classic_car' \
+            '3045064 luxury_showroom_escalator' \
+            '29555017 customer_inspects_new_car' \
+            '35476472 woman_showroom' \
+            '35516870 woman_with_car_showroom' \
+            '7154207 couple_buying_car' \
+            '7154230 dealership_group_discussion' \
+            '7154210 dealership_details_discussion' \
+            '7154221 dealer_couple_conversation' \
+            '7154232 woman_dealer_discussion' \
+            '7154242 customer_dealer_discussion' \
+            '7154219 dealership_consultation' \
+            '7154211 showroom_business_discussion' \
+            '7735809 family_budget_chart' \
+            '14514795 mechanic_tire' \
+            '4079654 gas_station_wide' \
+            '15330792 driving_forest_pov' \
+            '34540856 vintage_car_pov' \
+            '3978374 busy_road_pov' \
+            '5786587 highway_traffic' \
+            '5103753 city_tunnel_drive' \
+            '15419636 countryside_drive' > candidates.txt
+          echo 'id,label,width,height,duration,bitrate,native4k' > out/audit.csv
+          : > out/selected_4k.txt
+          while read -r vid label; do
+            echo "AUDIT $vid $label"
+            if ! curl -fsSL --retry 3 -A 'Mozilla/5.0' "https://www.pexels.com/download/video/${vid}/" -o "clips/${vid}.mp4"; then
+              echo "$vid,$label,0,0,0,0,false" >> out/audit.csv
+              continue
+            fi
+            W=$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of default=nw=1:nk=1 "clips/${vid}.mp4" 2>/dev/null || echo 0)
+            H=$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of default=nw=1:nk=1 "clips/${vid}.mp4" 2>/dev/null || echo 0)
+            DUR=$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "clips/${vid}.mp4" 2>/dev/null || echo 0)
+            BR=$(ffprobe -v error -show_entries format=bit_rate -of default=nw=1:nk=1 "clips/${vid}.mp4" 2>/dev/null || echo 0)
+            N4K=false
+            if [ "${W:-0}" -ge 3000 ] && [ "${H:-0}" -ge 1600 ] && [ "${W:-0}" -gt "${H:-0}" ]; then N4K=true; fi
+            echo "$vid,$label,$W,$H,$DUR,$BR,$N4K" >> out/audit.csv
+            if [ "$N4K" = true ]; then
+              echo "$vid $label $W $H" >> out/selected_4k.txt
+              ffmpeg -hide_banner -loglevel error -y -ss 2 -i "clips/${vid}.mp4" -frames:v 1 -vf 'scale=640:-2' "frames/${vid}_${label}.jpg" || true
+            fi
+          done < candidates.txt
+          COUNT=$(wc -l < out/selected_4k.txt | tr -d ' ')
+          echo "native_4k_count=$COUNT" | tee out/summary.txt
+          cat out/selected_4k.txt
+          if ls frames/*.jpg >/dev/null 2>&1; then montage frames/*.jpg -thumbnail 640x360 -tile 3x -geometry +8+8 out/contact_4k.jpg; fi
+          test "$COUNT" -ge 5
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cost-normal-native-4k-source-audit-2
+          path: out/
+          retention-days: 7
