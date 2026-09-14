@@ -1,0 +1,108 @@
+name: Cost of Normal Native 4K Audit
+
+on:
+  push:
+    branches: ['cost-of-normal-publish-4k-fast']
+    paths:
+      - '.github/workflows/cost-normal-native4k-audit.yml'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg python3-pil
+
+      - name: Audit candidate footage
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work/videos work/frames out
+          cat > /tmp/audit.py <<'PY'
+          import csv, json, subprocess, urllib.request
+          from pathlib import Path
+          from concurrent.futures import ThreadPoolExecutor, as_completed
+          from PIL import Image, ImageOps, ImageDraw, ImageFont
+
+          candidates = {
+            'dealer': [7154208,7154231,34760693,12293711,30340581,7154214,7154229,7154233,7154222,7154241,7154242,7154209,7154212,29555017,6817057,8725944,7154227],
+            'budget': [6963482,6919729,6962708,6963969,6962698,6963975,6962712,6963967,6962707,8298010,6962710,34828872,6700027,8814711,7735809,8479058,5981353],
+            'driving': [20589891,13646170,35186910,20183736,8551543,5786587,5927764,6117579,15341834,5103753,6577543,4483547,11367262],
+            'service': [32329405,32329403,20693179,20693181,8987210,8987066,4489800,32329382],
+            'fuel': [4079654,29576549,4912055,3777657,4092537,9109484,11901731]
+          }
+          root=Path('work'); videos=root/'videos'; frames=root/'frames'; out=Path('out')
+          labels={pid:kind for kind,ids in candidates.items() for pid in ids}
+          ids=list(labels)
+
+          def dl(pid):
+              dest=videos/f'{pid}.mp4'
+              req=urllib.request.Request(f'https://www.pexels.com/download/video/{pid}/',headers={'User-Agent':'Mozilla/5.0'})
+              try:
+                  with urllib.request.urlopen(req,timeout=120) as r, open(dest,'wb') as f:
+                      while True:
+                          b=r.read(1024*1024)
+                          if not b: break
+                          f.write(b)
+                  return pid, True, ''
+              except Exception as e:
+                  return pid, False, str(e)
+          with ThreadPoolExecutor(max_workers=10) as ex:
+              results=list(ex.map(dl,ids))
+          ok={pid for pid,s,_ in results if s}
+
+          rows=[]
+          for pid in ids:
+              p=videos/f'{pid}.mp4'
+              if pid not in ok or not p.exists():
+                  rows.append({'id':pid,'kind':labels[pid],'width':0,'height':0,'duration':0,'bitrate':0,'native4k':False,'landscape':False})
+                  continue
+              try:
+                  j=json.loads(subprocess.check_output(['ffprobe','-v','error','-select_streams','v:0','-show_entries','stream=width,height,bit_rate','-show_entries','format=duration,bit_rate','-of','json',str(p)],text=True))
+                  s=j['streams'][0]; f=j['format']; w=int(s['width']); h=int(s['height']); dur=float(f.get('duration',0)); br=int(f.get('bit_rate') or s.get('bit_rate') or 0)
+              except Exception:
+                  w=h=0; dur=0; br=0
+              native=(w>=3840 and h>=1900 and w>=h)
+              land=w>=h and h>0
+              rows.append({'id':pid,'kind':labels[pid],'width':w,'height':h,'duration':dur,'bitrate':br,'native4k':native,'landscape':land})
+              if native:
+                  t=max(0.0,min(2.0,dur/3))
+                  subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-ss',str(t),'-i',str(p),'-frames:v','1','-q:v','2',str(frames/f'{pid}.jpg')],check=False)
+
+          with open(out/'audit.csv','w',newline='') as f:
+              wr=csv.DictWriter(f,fieldnames=rows[0].keys()); wr.writeheader(); wr.writerows(rows)
+          good=[r for r in rows if r['native4k']]
+          Path(out/'native4k.json').write_text(json.dumps(good,indent=2))
+          summary={k:sum(1 for r in good if r['kind']==k) for k in candidates}
+          Path(out/'summary.json').write_text(json.dumps({'total_native4k':len(good),'by_kind':summary},indent=2))
+
+          # contact sheet of native 4K frames
+          imgs=[]
+          font=ImageFont.load_default()
+          for r in good:
+              fp=frames/f"{r['id']}.jpg"
+              if not fp.exists(): continue
+              im=Image.open(fp).convert('RGB')
+              im=ImageOps.fit(im,(480,270),method=Image.Resampling.LANCZOS)
+              canvas=Image.new('RGB',(480,305),'black'); canvas.paste(im,(0,0))
+              d=ImageDraw.Draw(canvas); d.text((8,278),f"{r['id']}  {r['kind']}  {r['width']}x{r['height']}",fill='white',font=font)
+              imgs.append(canvas)
+          if imgs:
+              cols=3; rowsn=(len(imgs)+cols-1)//cols
+              sheet=Image.new('RGB',(cols*480,rowsn*305),(20,20,20))
+              for i,im in enumerate(imgs): sheet.paste(im,((i%cols)*480,(i//cols)*305))
+              sheet.save(out/'native4k_contact.jpg',quality=92)
+          PY
+          python3 /tmp/audit.py
+          cat out/summary.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cost-normal-native4k-audit
+          path: out/*
+          retention-days: 7
+          compression-level: 0
