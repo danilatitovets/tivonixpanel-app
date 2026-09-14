@@ -1,0 +1,30 @@
+name: Cost of Normal Resolve Metricool URL
+on:
+  push:
+    branches:
+      - cost-of-normal-publish-4k-fast
+    paths:
+      - '.github/workflows/cost-normal-resolve-metricool-url.yml'
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve GitHub release asset URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          VIDEO='https://github.com/danilatitovets/tivonixpanel-app/releases/download/cost-normal-metricool-v1/Cost_of_Normal_Monthly_Payment_Trap_METRICOOL_4K.mp4'
+          THUMB='https://github.com/danilatitovets/tivonixpanel-app/releases/download/cost-normal-metricool-v1/Cost_of_Normal_84_MONTHS_thumbnail.jpg'
+          curl -sS -L -o /dev/null -w '%{url_effective}\n' "$VIDEO" > video_url.txt
+          curl -sS -L -o /dev/null -w '%{url_effective}\n' "$THUMB" > thumb_url.txt
+          echo "video=$(cat video_url.txt)"
+          echo "thumb=$(cat thumb_url.txt)"
+      - name: Upload resolved URLs
+        uses: actions/upload-artifact@v4
+        with:
+          name: cost-normal-resolved-urls
+          path: |
+            video_url.txt
+            thumb_url.txt
+          retention-days: 1
