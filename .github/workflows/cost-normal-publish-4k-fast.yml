@@ -47,7 +47,7 @@ jobs:
               s=j['streams'][0]; f=j['format']
               return {'w':int(s['width']),'h':int(s['height']),'dur':float(f['duration']),'bitrate':int(f.get('bit_rate') or 0)}
           def adur(p): return float(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','csv=p=0',str(p)],text=True).strip())
-          def esc(t): return t.replace('\\','\\\\').replace("'","\\'").replace(':','\\:').replace('%','\\%')
+          def esc(t): return t.replace('\\','\\\\').replace("'","’").replace(':','\\:')
 
           ids=[]
           for vals in M['sources'].values():
@@ -94,7 +94,7 @@ jobs:
 
           font=subprocess.check_output(['fc-match','-f','%{file}','Inter'],text=True).strip()
           overlays={int(k):v for k,v in M.get('overlays',{}).items()}
-          accent='0xD6AE67'; white='0xF6F3EC'; muted='0xD6D2C9'
+          accent='0xD6AE67'; white='0xF6F3EC'
 
           def render_one(s):
               src=R/f"work/video/{s['pid']}.mp4"; out=R/f"work/segments/{s['i']:03d}.mp4"
@@ -105,7 +105,7 @@ jobs:
                   vf += f',drawbox=x=180:y=600:w=10:h=760:color={accent}@0.95:t=fill'
                   sizes=[126,92,70]; ys=[650,905,1135]; colors=[white,white,accent]
                   for text,size,y,color in zip(lines,sizes,ys,colors):
-                      vf += f",drawtext=fontfile='{font}':text='{esc(text)}':fontcolor={color}:fontsize={size}:x=255:y={y}:shadowx=0:shadowy=0"
+                      vf += f",drawtext=fontfile='{font}':text='{esc(text)}':fontcolor={color}:fontsize={size}:x=255:y={y}:expansion=none"
               run(['ffmpeg','-hide_banner','-loglevel','error','-y','-ss',f"{s['ss']:.3f}",'-i',str(src),'-t',f"{s['dur']:.3f}",'-an','-vf',vf,'-c:v','libx264','-preset','veryfast','-crf','18','-g','60','-keyint_min','60','-sc_threshold','0','-pix_fmt','yuv420p',str(out)])
               return out
 
