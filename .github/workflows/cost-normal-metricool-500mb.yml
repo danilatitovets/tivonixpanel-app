@@ -1,0 +1,87 @@
+name: Cost of Normal Metricool 4K Under 500MB
+
+on:
+  push:
+    branches: ['cost-of-normal-publish-4k-fast']
+    paths:
+      - '.github/workflows/cost-normal-metricool-500mb.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  encode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg unzip fonts-inter
+
+      - name: Download validated native-4K master
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p stage
+          gh api -H 'Accept: application/vnd.github+json' \
+            /repos/${{ github.repository }}/actions/artifacts/10355443006/zip > master.zip
+          unzip -q master.zip -d stage
+          MASTER=$(find stage -type f -name '*FINAL_NATIVE4K.mp4' | head -1)
+          test -n "$MASTER"
+          mv "$MASTER" stage/source4k.mp4 || true
+          ffprobe -v error -show_entries format=duration,size,bit_rate -of json stage/source4k.mp4 | tee stage/source_probe.json
+
+      - name: Encode Metricool-safe 4K under 500MB
+        run: |
+          set -euo pipefail
+          # 6.45 Mbps video + 160 kbps audio keeps the 541.3s file around 448 MB.
+          ffmpeg -hide_banner -loglevel error -y -i stage/source4k.mp4 \
+            -map 0:v:0 -map 0:a:0 \
+            -c:v libx264 -preset veryfast -profile:v high -level 5.1 \
+            -b:v 6450k -maxrate 6900k -bufsize 13800k \
+            -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
+            -c:a aac -b:a 160k -ar 48000 \
+            -movflags +faststart \
+            stage/Cost_of_Normal_Monthly_Payment_Trap_METRICOOL_4K.mp4
+          SIZE=$(stat -c%s stage/Cost_of_Normal_Monthly_Payment_Trap_METRICOOL_4K.mp4)
+          LIMIT=500000000
+          echo "size_bytes=$SIZE" | tee stage/metricool_gate.txt
+          if [ "$SIZE" -ge "$LIMIT" ]; then
+            echo "Metricool 500MB gate failed" >&2
+            exit 1
+          fi
+          ffprobe -v error -show_entries format=duration,size,bit_rate -show_entries stream=codec_type,codec_name,width,height,r_frame_rate -of json stage/Cost_of_Normal_Monthly_Payment_Trap_METRICOOL_4K.mp4 | tee stage/upload_probe.json
+
+      - name: Build final thumbnail
+        run: |
+          set -euo pipefail
+          M=stage/source4k.mp4
+          ffmpeg -hide_banner -loglevel error -y -ss 45 -i "$M" -frames:v 1 -vf 'scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720' stage/base.jpg
+          FONT=$(fc-match -f '%{file}' Inter | head -1)
+          ffmpeg -hide_banner -loglevel error -y -i stage/base.jpg -vf "drawbox=x=0:y=0:w=600:h=720:color=black@0.40:t=fill,drawtext=fontfile='$FONT':text='84 MONTHS?':fontcolor=white:fontsize=92:x=54:y=215,drawtext=fontfile='$FONT':text='SAME CAR. LONGER DEBT.':fontcolor=0xE2C27A:fontsize=32:x=58:y=335" -frames:v 1 stage/Cost_of_Normal_84_MONTHS_thumbnail.jpg
+
+      - name: Publish Metricool staging assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG=cost-normal-metricool-v1
+          REPO="$GITHUB_REPOSITORY"
+          gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1 || gh release create "$TAG" --repo "$REPO" --title 'Cost of Normal Metricool master' --notes 'Metricool-compatible 4K upload master under 500 MB.' --target cost-of-normal-publish-4k-fast
+          gh release upload "$TAG" stage/Cost_of_Normal_Monthly_Payment_Trap_METRICOOL_4K.mp4 stage/Cost_of_Normal_84_MONTHS_thumbnail.jpg stage/upload_probe.json stage/metricool_gate.txt --repo "$REPO" --clobber
+          echo "VIDEO_URL=https://github.com/${{ github.repository }}/releases/download/$TAG/Cost_of_Normal_Monthly_Payment_Trap_METRICOOL_4K.mp4" | tee stage/urls.txt
+          echo "THUMB_URL=https://github.com/${{ github.repository }}/releases/download/$TAG/Cost_of_Normal_84_MONTHS_thumbnail.jpg" | tee -a stage/urls.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cost-normal-metricool-500mb-info
+          path: |
+            stage/urls.txt
+            stage/upload_probe.json
+            stage/metricool_gate.txt
+            stage/Cost_of_Normal_84_MONTHS_thumbnail.jpg
+          retention-days: 7
