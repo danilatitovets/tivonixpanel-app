@@ -29,13 +29,20 @@
     "https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/6967311e-0fd2-4561-9e4b-72a9fb01c395.mp3",
     "https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/95084958-c89a-4c5e-b0a4-66357d3b68a7.mp3"
   ],
-  "pexels_ids": [12293711,7154242,7154232,7154229,6963972,6962837,6963478,7154241,7154233,7154219,3045064,30340581,37591124,20693179,14514795,26220998,11194983,4337977,5915628,5786587,9521384,36632256,5972216,6963962,6964253,7154231,26542243,12769430,5962561],
-  "kinds": ["dealer","driving","dealer","budget","budget","dealer","dealer","driving","budget","dealer","driving","budget","service","driving","service","service","driving","budget","dealer","budget","dealer","dealer","budget","dealer","budget","driving","mixed","dealer"],
-  "pools": {
-    "dealer": [1,2,3,7,8,9,14,15,16,17,18,28],
-    "driving": [0,10,11,13,19,20,27],
-    "budget": [4,5,6,21,22,23,24],
-    "service": [8,12,13,25,26],
-    "mixed": [0,1,3,4,8,10,12,14,19,21,25,28]
+  "sources": {
+    "dealer": [7154208,7154231,34760693,12293711,30340581,7154214,7154229,7154233,7154222,7154241,7154242,7154209,7154212,29555017],
+    "driving": [20589891,13646170,35186910,20183736,8551543,5786587,5927764,6117579,15341834,5103753],
+    "budget": [6963482,6919729,6962708,6963969,6962698,6963975,6962712,6963967,6962707,8298010,6962710,34828872,6700027,8814711],
+    "service": [32329405,32329403,20693179,8987210],
+    "fuel": [4079654,29576549,4912055,3777657,4092537,9109484,11901731]
+  },
+  "kinds": ["driving","dealer","dealer","data","data","data","dealer","dealer","driving","budget","dealer","budget","fuel","service","driving","service","credit","budget","dealer","budget","dealer","dealer","budget","dealer","budget","driving","service","dealer"],
+  "overlays": {
+    "4": ["SAME CAR", "SAME $43,610 PRINCIPAL", "SAME 6.35% APR"],
+    "5": ["48 MONTHS", "$1,031 / MO", "$5,887 INTEREST"],
+    "6": ["84 MONTHS", "$644 / MO", "+$4,634 INTEREST  •  +36 MONTHS"],
+    "17": ["CREDIT CHANGES THE MATH", "~4.41% SUPER-PRIME", "~16.11% DEEP-SUBPRIME"],
+    "21": ["MONTHLY PAYMENT ≠ TOTAL COST", "PRICE  •  APR  •  TERM  •  TOTAL OF PAYMENTS"],
+    "28": ["LOWER PAYMENT ≠ CHEAPER CAR", "THE COST WAS REARRANGED ACROSS TIME"]
   }
 }
