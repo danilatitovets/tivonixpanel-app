@@ -30,19 +30,19 @@
     "https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/95084958-c89a-4c5e-b0a4-66357d3b68a7.mp3"
   ],
   "sources": {
-    "dealer": [7154208,7154231,34760693,12293711,30340581,7154214,7154229,7154233,7154222,7154241,7154242,7154209,7154212,29555017],
-    "driving": [20589891,13646170,35186910,20183736,8551543,5786587,5927764,6117579,15341834,5103753],
-    "budget": [6963482,6919729,6962708,6963969,6962698,6963975,6962712,6963967,6962707,8298010,6962710,34828872,6700027,8814711],
-    "service": [32329405,32329403,20693179,8987210],
-    "fuel": [4079654,29576549,4912055,3777657,4092537,9109484,11901731]
+    "dealer": [6817057,6817063,8725944,34760693,30340581],
+    "driving": [31901292,8551543,6117579,5786587],
+    "budget": [5981353,6700027,7477075,8479058],
+    "service": [4489800,8987066,32329382,8987210],
+    "fuel": [29576549,4912055]
   },
   "kinds": ["driving","dealer","dealer","data","data","data","dealer","dealer","driving","budget","dealer","budget","fuel","service","driving","service","credit","budget","dealer","budget","dealer","dealer","budget","dealer","budget","driving","service","dealer"],
   "overlays": {
-    "4": ["SAME CAR", "SAME $43,610 PRINCIPAL", "SAME 6.35% APR"],
-    "5": ["48 MONTHS", "$1,031 / MO", "$5,887 INTEREST"],
-    "6": ["84 MONTHS", "$644 / MO", "+$4,634 INTEREST  •  +36 MONTHS"],
-    "17": ["CREDIT CHANGES THE MATH", "~4.41% SUPER-PRIME", "~16.11% DEEP-SUBPRIME"],
-    "21": ["MONTHLY PAYMENT ≠ TOTAL COST", "PRICE  •  APR  •  TERM  •  TOTAL OF PAYMENTS"],
-    "28": ["LOWER PAYMENT ≠ CHEAPER CAR", "THE COST WAS REARRANGED ACROSS TIME"]
+    "4": ["THE SAME CAR", "$43,610 FINANCED", "6.35% APR"],
+    "5": ["48 MONTHS", "$1,031 / MONTH", "$5,887 INTEREST"],
+    "6": ["84 MONTHS", "$644 / MONTH", "+$4,634 INTEREST"],
+    "17": ["CREDIT CHANGES THE RATE", "4.41% SUPER-PRIME", "16.11% DEEP-SUBPRIME"],
+    "21": ["PAYMENT ≠ TOTAL COST", "PRICE  •  APR  •  TERM", "TOTAL OF PAYMENTS"],
+    "28": ["LOWER PAYMENT", "DOESN'T MEAN", "CHEAPER CAR"]
   }
 }
