@@ -33,7 +33,8 @@ jobs:
           find stage -type f -maxdepth 3 -print
           MASTER=$(find stage -type f -name '*FINAL_NATIVE4K.mp4' | head -1)
           test -n "$MASTER"
-          mv "$MASTER" stage/Cost_of_Normal_Monthly_Payment_Trap_FINAL_NATIVE4K.mp4
+          TARGET=stage/Cost_of_Normal_Monthly_Payment_Trap_FINAL_NATIVE4K.mp4
+          if [ "$MASTER" != "$TARGET" ]; then mv "$MASTER" "$TARGET"; fi
 
       - name: Build compact 4K upload master and thumbnail
         run: |
