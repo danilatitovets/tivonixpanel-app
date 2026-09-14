@@ -1,0 +1,130 @@
+name: Cost of Normal Fast Render
+
+on:
+  push:
+    branches: ['cost-of-normal-render']
+    paths:
+      - '.github/workflows/cost-normal-fast.yml'
+  workflow_dispatch:
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg curl git fonts-dejavu-core
+          python3 -m pip install --upgrade uv
+
+      - name: Clone MoneyPrinterTurbo
+        run: |
+          git clone --depth 1 https://github.com/harry0703/MoneyPrinterTurbo.git mpt
+          cd mpt
+          cp config.example.toml config.toml
+          uv sync --no-dev
+
+      - name: Download real footage and narration
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p input/audio input/video qa output
+          AUDIO_URLS=(
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/dd209787-3680-4d9d-84df-4c040e41ed86.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/be03cc8b-2134-420a-897f-d97166aee2fc.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/46b90c1a-56a8-47f9-a2d9-efec7a8c521f.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/fde57f28-5498-416e-937d-a8c7db0974d8.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/c20d33a4-3403-4f5b-bee2-f033573e0c31.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/6e6f8bb1-9af6-41b2-bcee-79f5f1941a1f.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/07fb7b11-730b-49ef-945c-7573f38f69e9.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/ef68b0d2-ca41-4590-87a0-7f1de2d70075.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/3abaa658-758a-4cea-ba45-836cf79dd46a.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/8ca9cef0-4bbe-4746-a670-f0b74cd284eb.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/ee80c49e-272e-41a6-980d-59c3d9b399d8.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/43da05ca-9dbc-46ba-9454-63716bdd30a2.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/5c67049b-e808-4356-a479-140d124dfcaa.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/f574f792-a1e0-4ae4-bd58-9681a3ffcd70.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/203cc6d8-2b2b-4fde-b236-e8bfe20e54ab.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/60e6e8cb-bba1-4a3d-bea9-6062ffc2cd16.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/f3589e90-ce16-4848-9202-9d895c974843.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/fb082ffd-4127-4e7c-bb58-b76f1c5f6818.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/ccbf7b9f-36f3-416b-b5ee-1eff46094850.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/f365b9be-f27e-4415-87b8-79c071a1cb58.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/40e4e0b6-37e7-409d-b033-1c3d7c2d1b2a.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/0b9316a8-ea8e-4619-9c4d-f71f49c74fc9.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/654c99a8-cd16-406c-815c-b68585144fdd.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/3b2c22e2-8b09-4af7-a3da-f4b57c48d006.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/221a72ae-ca52-4caa-8388-3b5f5ff65eb9.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/6b3a8b93-0444-4ca0-b9ce-34bb51134cad.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/6967311e-0fd2-4561-9e4b-72a9fb01c395.mp3'
+            'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/95084958-c89a-4c5e-b0a4-66357d3b68a7.mp3'
+          )
+          PEXELS_IDS=(12293711 7154242 7154232 7154229 6963972 6962837 6963478 7154241 7154233 7154219 3045064 30340581 37591124 20693179 14514795 26220998 11194983 4337977 5915628 5786587 9521384 36632256 5972216 6963962 6964253 7154231 26542243 12769430 5962561)
+          for i in "${!AUDIO_URLS[@]}"; do n=$(printf '%02d' $((i+1))); curl -fL --retry 4 "${AUDIO_URLS[$i]}" -o "input/audio/${n}.mp3"; done
+          for i in "${!PEXELS_IDS[@]}"; do n=$(printf '%02d' $((i+1))); id="${PEXELS_IDS[$i]}"; curl -fL --retry 4 -A 'Mozilla/5.0' "https://www.pexels.com/download/video/${id}/" -o "input/video/${n}_${id}.mp4"; done
+          : > input/audio/list.txt
+          for f in input/audio/*.mp3; do printf "file '%s'\n" "$PWD/$f" >> input/audio/list.txt; done
+          ffmpeg -hide_banner -loglevel error -y -f concat -safe 0 -i input/audio/list.txt -c:a aac -b:a 192k -ar 48000 input/narration.m4a
+
+      - name: Build fast premium documentary
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > build.py <<'PY'
+          from pathlib import Path
+          import os, sys, random, subprocess, json
+          ROOT=Path.cwd(); MPT=ROOT/'mpt'; sys.path.insert(0,str(MPT)); os.chdir(MPT)
+          import app.services.video as vs
+          from app.models.schema import VideoAspect, VideoConcatMode, VideoFitMode
+          orig=vs._write_videofile_with_codec_fallback
+          def quality_writer(clip, output_file, codec, **kwargs):
+              kwargs.setdefault('preset','veryfast')
+              kwargs.setdefault('ffmpeg_params',['-crf','18'])
+              return orig(clip, output_file, codec, **kwargs)
+          vs._write_videofile_with_codec_fallback=quality_writer
+          vids=sorted((ROOT/'input/video').glob('*.mp4'))
+          pools={'dealer':[1,2,3,7,8,9,14,15,16,17,18,28],'driving':[0,10,11,13,19,20,27],'budget':[4,5,6,21,22,23,24],'service':[8,12,13,25,26],'mixed':[0,1,3,4,8,10,12,14,19,21,25,28]}
+          kinds=['dealer','driving','dealer','budget','budget','dealer','dealer','driving','budget','dealer','driving','budget','service','driving','service','service','driving','budget','dealer','budget','dealer','dealer','budget','dealer','budget','driving','mixed','dealer']
+          ordered=ROOT/'input/ordered'; ordered.mkdir(exist_ok=True)
+          seq=[]; k=0
+          for s,kind in enumerate(kinds,1):
+              pool=pools[kind]; off=(s*2)%len(pool); chosen=(pool[off:]+pool[:off])[:5]
+              for j in chosen:
+                  src=vids[j%len(vids)]; dst=ordered/f'{k:03d}_{src.name}'
+                  if not dst.exists(): os.symlink(src,dst)
+                  seq.append(str(dst)); k+=1
+          (ROOT/'qa/scene_map.json').write_text(json.dumps({'kinds':kinds,'ordered':seq},indent=2))
+          random.seed(42)
+          vs.combine_videos(str(ROOT/'output/silent.mp4'),seq,str(ROOT/'input/narration.m4a'),VideoAspect.landscape,VideoConcatMode.sequential,None,4,4,1.0,VideoFitMode.cover)
+          PY
+          cd mpt && uv run python ../build.py && cd ..
+          ffmpeg -hide_banner -loglevel error -y -i output/silent.mp4 -i input/narration.m4a \
+            -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='SAME $43,610  |  SAME 6.35% APR':fontcolor=white:fontsize=42:box=1:boxcolor=black@0.68:boxborderw=22:x=(w-text_w)/2:y=h-150:enable='between(t,60,72)',drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='48 mo  $1,031/mo   →   84 mo  $644/mo':fontcolor=white:fontsize=44:box=1:boxcolor=black@0.72:boxborderw=24:x=(w-text_w)/2:y=h-160:enable='between(t,95,110)'" \
+            -map 0:v:0 -map 1:a:0 -shortest -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p -r 30 -c:a aac -b:a 192k -ar 48000 -movflags +faststart \
+            output/Cost_of_Normal_The_Monthly_Payment_Trap_FINAL_1080p.mp4
+
+      - name: Automated visual QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          V=output/Cost_of_Normal_The_Monthly_Payment_Trap_FINAL_1080p.mp4
+          ffprobe -v error -show_entries format=duration,size,bit_rate -show_entries stream=codec_type,codec_name,width,height,r_frame_rate -of json "$V" | tee qa/probe.json
+          mkdir -p qa/frames
+          for t in 10 75 150 270 420 520; do ffmpeg -hide_banner -loglevel error -y -ss "$t" -i "$V" -frames:v 1 -q:v 2 "qa/frames/${t}.jpg"; done
+          ffmpeg -hide_banner -i "$V" -vf blackdetect=d=0.5:pix_th=0.10 -an -f null - 2> qa/blackdetect.txt || true
+          if grep -q 'black_duration:' qa/blackdetect.txt; then cat qa/blackdetect.txt; exit 1; fi
+          test $(stat -c%s "$V") -gt 70000000
+
+      - name: Upload master and QA
+        uses: actions/upload-artifact@v4
+        with:
+          name: cost-normal-final-master
+          path: |
+            output/Cost_of_Normal_The_Monthly_Payment_Trap_FINAL_1080p.mp4
+            qa/probe.json
+            qa/scene_map.json
+            qa/blackdetect.txt
+            qa/frames/*.jpg
+          retention-days: 7
+          compression-level: 0
