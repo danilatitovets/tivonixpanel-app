@@ -73,8 +73,11 @@ jobs:
           set -euo pipefail
           cat > build.py <<'PY'
           from pathlib import Path
-          import os, sys, random, subprocess, json
-          ROOT=Path.cwd(); MPT=ROOT/'mpt'; sys.path.insert(0,str(MPT)); os.chdir(MPT)
+          import os, sys, random, json
+          ROOT=Path(__file__).resolve().parent
+          MPT=ROOT/'mpt'
+          sys.path.insert(0,str(MPT))
+          os.chdir(MPT)
           import app.services.video as vs
           from app.models.schema import VideoAspect, VideoConcatMode, VideoFitMode
           orig=vs._write_videofile_with_codec_fallback
@@ -98,9 +101,9 @@ jobs:
           random.seed(42)
           vs.combine_videos(str(ROOT/'output/silent.mp4'),seq,str(ROOT/'input/narration.m4a'),VideoAspect.landscape,VideoConcatMode.sequential,None,4,4,1.0,VideoFitMode.cover)
           PY
-          cd mpt && uv run python ../build.py && cd ..
+          mpt/.venv/bin/python build.py
           ffmpeg -hide_banner -loglevel error -y -i output/silent.mp4 -i input/narration.m4a \
-            -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='SAME $43,610  |  SAME 6.35% APR':fontcolor=white:fontsize=42:box=1:boxcolor=black@0.68:boxborderw=22:x=(w-text_w)/2:y=h-150:enable='between(t,60,72)',drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='48 mo  $1,031/mo   →   84 mo  $644/mo':fontcolor=white:fontsize=44:box=1:boxcolor=black@0.72:boxborderw=24:x=(w-text_w)/2:y=h-160:enable='between(t,95,110)'" \
+            -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='SAME 43,610 USD  |  SAME 6.35% APR':fontcolor=white:fontsize=42:box=1:boxcolor=black@0.68:boxborderw=22:x=(w-text_w)/2:y=h-150:enable='between(t,60,72)',drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='48 mo  1,031/mo   ->   84 mo  644/mo':fontcolor=white:fontsize=44:box=1:boxcolor=black@0.72:boxborderw=24:x=(w-text_w)/2:y=h-160:enable='between(t,95,110)'" \
             -map 0:v:0 -map 1:a:0 -shortest -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p -r 30 -c:a aac -b:a 192k -ar 48000 -movflags +faststart \
             output/Cost_of_Normal_The_Monthly_Payment_Trap_FINAL_1080p.mp4
 
