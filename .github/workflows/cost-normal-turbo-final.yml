@@ -1,0 +1,157 @@
+name: Cost of Normal Turbo Final
+
+on:
+  push:
+    branches: ['cost-of-normal-turbo-final']
+    paths:
+      - '.github/workflows/cost-normal-turbo-final.yml'
+  workflow_dispatch:
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Render semantic documentary
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/render.py <<'PY'
+          from pathlib import Path
+          from concurrent.futures import ThreadPoolExecutor, as_completed
+          import json, subprocess, urllib.request, math, os
+
+          R = Path.cwd()
+          M = json.loads((R/'cost-normal/manifest.json').read_text())
+          for d in ['work/audio','work/video','work/segments','work/qa/frames','work/output']:
+              (R/d).mkdir(parents=True, exist_ok=True)
+
+          def run(cmd):
+              subprocess.run(cmd, check=True)
+          def probe(path, entries):
+              return subprocess.check_output(['ffprobe','-v','error','-show_entries',entries,'-of','json',str(path)], text=True)
+          def download(url, dest):
+              req=urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0'})
+              with urllib.request.urlopen(req, timeout=120) as r, open(dest,'wb') as f:
+                  while True:
+                      b=r.read(1024*1024)
+                      if not b: break
+                      f.write(b)
+              return str(dest)
+
+          jobs=[]
+          with ThreadPoolExecutor(max_workers=10) as ex:
+              for i,u in enumerate(M['audio_urls'],1):
+                  jobs.append(ex.submit(download,u,R/f'work/audio/{i:02d}.mp3'))
+              for i,pid in enumerate(M['pexels_ids'],1):
+                  u=f'https://www.pexels.com/download/video/{pid}/'
+                  jobs.append(ex.submit(download,u,R/f'work/video/{i:02d}_{pid}.mp4'))
+              for f in as_completed(jobs): f.result()
+
+          audios=sorted((R/'work/audio').glob('*.mp3'))
+          videos=sorted((R/'work/video').glob('*.mp4'))
+          assert len(audios)==28 and len(videos)==29
+
+          def media_info(p):
+              raw=subprocess.check_output(['ffprobe','-v','error','-select_streams','v:0','-show_entries','stream=width,height','-show_entries','format=duration','-of','json',str(p)],text=True)
+              j=json.loads(raw); s=j['streams'][0]
+              return {'w':int(s['width']),'h':int(s['height']),'dur':float(j['format']['duration'])}
+          def audio_dur(p):
+              return float(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','csv=p=0',str(p)],text=True).strip())
+
+          vinfo={p:media_info(p) for p in videos}
+          landscape=[p for p in videos if vinfo[p]['w']>=vinfo[p]['h'] and vinfo[p]['w']>=1280]
+          if len(landscape)<12:
+              landscape=[p for p in videos if vinfo[p]['w']>=vinfo[p]['h']]
+          if len(landscape)<8: landscape=videos
+
+          index_to_video={i:p for i,p in enumerate(videos)}
+          pools={k:[index_to_video[i%len(videos)] for i in vals] for k,vals in M['pools'].items()}
+          for k,vals in pools.items():
+              good=[p for p in vals if p in landscape]
+              pools[k]=good if len(good)>=2 else landscape
+
+          specs=[]; cursor=0.0; usage={p:0 for p in videos}; last=None; scene_map=[]
+          for scene,(a,kind) in enumerate(zip(audios,M['kinds']),1):
+              ad=audio_dur(a); remain=ad; scene_start=cursor; pool=pools[kind]
+              rotation=(scene*3)%len(pool); order=pool[rotation:]+pool[:rotation]
+              shot=0
+              while remain>0.035:
+                  candidates=[p for p in order if p!=last] or order
+                  p=candidates[shot%len(candidates)]
+                  sd=min(4.0,remain)
+                  maxstart=max(0.0,vinfo[p]['dur']-sd-0.15)
+                  start=0.0 if maxstart<=0 else min(maxstart,(usage[p]*3.7 + scene*1.13) % maxstart)
+                  usage[p]+=1; last=p
+                  specs.append({'i':len(specs)+1,'scene':scene,'kind':kind,'src':str(p),'ss':start,'dur':sd,'global':cursor})
+                  cursor+=sd; remain-=sd; shot+=1
+              scene_map.append({'scene':scene,'kind':kind,'start':scene_start,'end':cursor,'audio':a.name})
+
+          (R/'work/qa/scene_map.json').write_text(json.dumps(scene_map,indent=2))
+          (R/'work/qa/source_info.json').write_text(json.dumps({str(p):vinfo[p] for p in videos},indent=2))
+
+          font='/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+          def overlay_for(t):
+              if 80 <= t < 94: return 'SAME 43,610 USD  |  SAME 6.35% APR'
+              if 94 <= t < 108: return '48 mo  1,031/mo   ->   84 mo  644/mo'
+              if 108 <= t < 121: return 'Payment -386.77/mo  |  Interest +4,634  |  Debt +36 months'
+              return None
+          def render_one(s):
+              out=R/f"work/segments/{s['i']:03d}.mp4"
+              vf='scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,fps=30,setsar=1'
+              text=overlay_for(s['global']+s['dur']/2)
+              if text:
+                  safe=text.replace("'","\\'").replace(':','\\:')
+                  vf += f",drawtext=fontfile={font}:text='{safe}':fontcolor=white:fontsize=38:box=1:boxcolor=black@0.68:boxborderw=20:x=(w-text_w)/2:y=h-145"
+              run(['ffmpeg','-hide_banner','-loglevel','error','-y','-ss',f"{s['ss']:.3f}",'-i',s['src'],'-t',f"{s['dur']:.3f}",'-an','-vf',vf,'-c:v','libx264','-preset','veryfast','-crf','18','-g','60','-keyint_min','60','-sc_threshold','0','-pix_fmt','yuv420p','-movflags','+faststart',str(out)])
+              return out
+
+          with ThreadPoolExecutor(max_workers=8) as ex:
+              futs=[ex.submit(render_one,s) for s in specs]
+              for f in as_completed(futs): f.result()
+
+          with open(R/'work/segments/list.txt','w') as f:
+              for i in range(1,len(specs)+1): f.write(f"file '{(R/f'work/segments/{i:03d}.mp4').resolve()}'\n")
+          with open(R/'work/audio/list.txt','w') as f:
+              for p in audios: f.write(f"file '{p.resolve()}'\n")
+
+          run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',str(R/'work/segments/list.txt'),'-c:v','copy','-an',str(R/'work/output/visual.mp4')])
+          run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',str(R/'work/audio/list.txt'),'-af','loudnorm=I=-16:LRA=7:TP=-1.5','-c:a','aac','-b:a','192k','-ar','48000',str(R/'work/output/narration.m4a')])
+          final=R/'work/output/Cost_of_Normal_The_Monthly_Payment_Trap_FINAL_1080p.mp4'
+          run(['ffmpeg','-hide_banner','-loglevel','error','-y','-i',str(R/'work/output/visual.mp4'),'-i',str(R/'work/output/narration.m4a'),'-map','0:v:0','-map','1:a:0','-shortest','-c:v','copy','-c:a','copy','-movflags','+faststart',str(final)])
+          (R/'work/qa/probe.json').write_text(probe(final,'format=duration,size,bit_rate:stream=codec_type,codec_name,width,height,r_frame_rate'))
+          print(final)
+          PY
+          python3 /tmp/render.py
+
+      - name: Visual QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          V=work/output/Cost_of_Normal_The_Monthly_Payment_Trap_FINAL_1080p.mp4
+          cat work/qa/probe.json
+          for t in 10 75 150 270 420 520; do ffmpeg -hide_banner -loglevel error -y -ss "$t" -i "$V" -frames:v 1 -q:v 2 "work/qa/frames/${t}.jpg"; done
+          ffmpeg -hide_banner -i "$V" -vf blackdetect=d=0.7:pix_th=0.10 -an -f null - 2> work/qa/blackdetect.txt || true
+          if grep -q 'black_duration:' work/qa/blackdetect.txt; then cat work/qa/blackdetect.txt; exit 1; fi
+          test $(stat -c%s "$V") -gt 70000000
+
+      - name: Upload final master
+        uses: actions/upload-artifact@v4
+        with:
+          name: cost-normal-turbo-final-master
+          path: |
+            work/output/Cost_of_Normal_The_Monthly_Payment_Trap_FINAL_1080p.mp4
+            work/qa/probe.json
+            work/qa/scene_map.json
+            work/qa/source_info.json
+            work/qa/blackdetect.txt
+            work/qa/frames/*.jpg
+          retention-days: 7
+          compression-level: 0
