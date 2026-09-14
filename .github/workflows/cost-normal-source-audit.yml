@@ -1,102 +1,79 @@
 name: Cost of Normal Native 4K Source Audit
-
 on:
   push:
-    branches: ['cost-of-normal-publish-4k-fast']
+    branches:
+      - cost-of-normal-publish-4k-fast
     paths:
-      - '.github/workflows/cost-normal-source-audit.yml'
-  workflow_dispatch:
-
+      - .github/workflows/cost-normal-source-audit.yml
 jobs:
   audit:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Install ffmpeg
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg imagemagick
-
-      - name: Download and audit candidate real-stock clips
+      - name: Install tools
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg imagemagick
+      - name: Audit native 4K real stock
         shell: bash
         run: |
-          set -euo pipefail
+          set -e
           mkdir -p clips frames out
-          cat > candidates.tsv <<'EOF'
-          7154229	dealership_signing
-          7154224	dealership_key_closeup
-          7154212	dealership_key_handover
-          7154214	dealer_customer_talk
-          7154208	dealer_keys_handshake
-          7154235	dealer_presenting_cars
-          7154209	couple_with_dealer
-          7154233	vehicle_inspection_docs
-          7154222	dealer_client_chat
-          7154241	dealer_customer_discussion
-          6817057	car_key_handover
-          8052392	signing_inside_car
-          8725944	contract_closeup
-          34760693	dealership_finance_consultation
-          6962708	couple_bills_laptop
-          6963967	calculator_financial_stress
-          6963635	kitchen_household_bills
-          5981353	calculator_cash_closeup
-          7735809	family_budget_chart
-          32329382	mechanic_engine_work
-          14514795	mechanic_tire
-          37591124	modern_auto_workshop
-          29576549	gas_station_closeup
-          4079654	gas_station_wide
-          11367262	driving_pov_country
-          13646170	driving_pov_highway
-          4483547	driving_pov_city
-          6577543	driver_interior
-          15330792	driving_forest_pov
-          EOF
-
-          echo 'id,label,width,height,fps,duration,bitrate,landscape,native4k' > out/audit.csv
-          : > out/selected_4k.tsv
-
-          while IFS=$'\t' read -r id label; do
-            echo "Downloading $id $label"
-            if ! curl -fL --retry 3 --retry-delay 2 -A 'Mozilla/5.0' "https://www.pexels.com/download/video/${id}/" -o "clips/${id}.mp4"; then
-              echo "$id,$label,0,0,0,0,0,false,false" >> out/audit.csv
+          printf '%s\n' \
+            '7154229 dealership_signing' \
+            '7154224 dealership_key_closeup' \
+            '7154212 dealership_key_handover' \
+            '7154214 dealer_customer_talk' \
+            '7154208 dealer_keys_handshake' \
+            '7154235 dealer_presenting_cars' \
+            '7154209 couple_with_dealer' \
+            '7154233 vehicle_inspection_docs' \
+            '7154222 dealer_client_chat' \
+            '7154241 dealer_customer_discussion' \
+            '6817057 car_key_handover' \
+            '8052392 signing_inside_car' \
+            '8725944 contract_closeup' \
+            '34760693 dealership_finance_consultation' \
+            '6962708 couple_bills_laptop' \
+            '6963967 calculator_financial_stress' \
+            '6963635 kitchen_household_bills' \
+            '5981353 calculator_cash_closeup' \
+            '7735809 family_budget_chart' \
+            '32329382 mechanic_engine_work' \
+            '14514795 mechanic_tire' \
+            '37591124 modern_auto_workshop' \
+            '29576549 gas_station_closeup' \
+            '4079654 gas_station_wide' \
+            '11367262 driving_pov_country' \
+            '13646170 driving_pov_highway' \
+            '4483547 driving_pov_city' \
+            '6577543 driver_interior' \
+            '15330792 driving_forest_pov' > candidates.txt
+          echo 'id,label,width,height,duration,bitrate,native4k' > out/audit.csv
+          : > out/selected_4k.txt
+          while read -r id label; do
+            echo "AUDIT $id $label"
+            if ! curl -fsSL --retry 3 -A 'Mozilla/5.0' "https://www.pexels.com/download/video/${id}/" -o "clips/${id}.mp4"; then
+              echo "$id,$label,0,0,0,0,false" >> out/audit.csv
               continue
             fi
-            W=$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 "clips/${id}.mp4" || echo 0)
-            H=$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "clips/${id}.mp4" || echo 0)
-            FPS=$(ffprobe -v error -select_streams v:0 -show_entries stream=avg_frame_rate -of csv=p=0 "clips/${id}.mp4" || echo 0)
-            DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "clips/${id}.mp4" || echo 0)
-            BR=$(ffprobe -v error -show_entries format=bit_rate -of csv=p=0 "clips/${id}.mp4" || echo 0)
-            LAND=false
+            W=$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of default=nw=1:nk=1 "clips/${id}.mp4" 2>/dev/null || echo 0)
+            H=$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of default=nw=1:nk=1 "clips/${id}.mp4" 2>/dev/null || echo 0)
+            DUR=$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "clips/${id}.mp4" 2>/dev/null || echo 0)
+            BR=$(ffprobe -v error -show_entries format=bit_rate -of default=nw=1:nk=1 "clips/${id}.mp4" 2>/dev/null || echo 0)
             N4K=false
-            if [ "${W:-0}" -gt "${H:-0}" ]; then LAND=true; fi
-            if [ "$LAND" = true ] && [ "${W:-0}" -ge 3000 ] && [ "${H:-0}" -ge 1600 ]; then N4K=true; fi
-            echo "$id,$label,$W,$H,$FPS,$DUR,$BR,$LAND,$N4K" >> out/audit.csv
+            if [ "${W:-0}" -ge 3000 ] && [ "${H:-0}" -ge 1600 ] && [ "${W:-0}" -gt "${H:-0}" ]; then N4K=true; fi
+            echo "$id,$label,$W,$H,$DUR,$BR,$N4K" >> out/audit.csv
             if [ "$N4K" = true ]; then
-              printf '%s\t%s\t%s\t%s\n' "$id" "$label" "$W" "$H" >> out/selected_4k.tsv
-              T=$(python3 - <<PY
-try:
-    d=float('${DUR:-0}')
-    print(max(0.5,min(d/2,6)))
-except: print(2)
-PY
-)
-              ffmpeg -hide_banner -loglevel error -y -ss "$T" -i "clips/${id}.mp4" -frames:v 1 -vf "scale=640:-2" "frames/${id}_${label}.jpg" || true
+              echo "$id $label $W $H" >> out/selected_4k.txt
+              ffmpeg -hide_banner -loglevel error -y -ss 2 -i "clips/${id}.mp4" -frames:v 1 -vf 'scale=640:-2' "frames/${id}_${label}.jpg" || true
             fi
-          done < candidates.tsv
-
-          echo '--- NATIVE 4K LANDSCAPE SOURCES ---'
-          cat out/selected_4k.tsv || true
-          COUNT=$(wc -l < out/selected_4k.tsv | tr -d ' ')
+          done < candidates.txt
+          COUNT=$(wc -l < out/selected_4k.txt | tr -d ' ')
           echo "native_4k_count=$COUNT" | tee out/summary.txt
-          test "$COUNT" -ge 8
-
-          if compgen -G 'frames/*.jpg' > /dev/null; then
-            montage frames/*.jpg -thumbnail 640x360 -tile 3x -geometry +8+8 out/contact_4k.jpg
-          fi
-
+          cat out/selected_4k.txt
+          if ls frames/*.jpg >/dev/null 2>&1; then montage frames/*.jpg -thumbnail 640x360 -tile 3x -geometry +8+8 out/contact_4k.jpg; fi
+          test "$COUNT" -ge 6
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: cost-normal-native-4k-source-audit
           path: out/
