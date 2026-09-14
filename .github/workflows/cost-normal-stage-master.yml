@@ -1,0 +1,86 @@
+name: Cost of Normal Stage Master
+
+on:
+  push:
+    branches: ['cost-of-normal-publish-4k-fast']
+    paths:
+      - '.github/workflows/cost-normal-stage-master.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_RUN: '34842469864'
+      TAG: 'cost-normal-monthly-payment-trap-2026-09-14'
+    steps:
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Wait for validated master artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p stage
+          for i in $(seq 1 90); do
+            rm -rf stage/master
+            mkdir -p stage/master
+            if gh run download "$SOURCE_RUN" --repo "$GITHUB_REPOSITORY" -n cost-normal-publish-ready-4k-h264-master -D stage/master 2>/tmp/err; then
+              find stage/master -type f -maxdepth 2 -print
+              exit 0
+            fi
+            echo "Waiting for master artifact ($i/90)..."
+            sleep 20
+          done
+          cat /tmp/err || true
+          exit 1
+
+      - name: Prepare release-safe 4K master
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC=$(find stage/master -type f -name '*.mp4' | head -1)
+          test -n "$SRC"
+          SIZE=$(stat -c%s "$SRC")
+          echo "source_size=$SIZE"
+          if [ "$SIZE" -lt 1950000000 ]; then
+            cp "$SRC" stage/Cost_of_Normal_Monthly_Payment_Trap_4K.mp4
+          else
+            echo "Master exceeds GitHub Release 2 GB limit; producing upload-safe 4K copy"
+            ffmpeg -hide_banner -loglevel error -y -i "$SRC" \
+              -c:v libx264 -preset veryfast -b:v 22M -maxrate 24M -bufsize 48M -pix_fmt yuv420p \
+              -c:a aac -b:a 256k -movflags +faststart \
+              stage/Cost_of_Normal_Monthly_Payment_Trap_4K.mp4
+          fi
+          FINAL_SIZE=$(stat -c%s stage/Cost_of_Normal_Monthly_Payment_Trap_4K.mp4)
+          echo "final_size=$FINAL_SIZE"
+          test "$FINAL_SIZE" -lt 2000000000
+
+      - name: Create or update public staging release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" stage/Cost_of_Normal_Monthly_Payment_Trap_4K.mp4 --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" stage/Cost_of_Normal_Monthly_Payment_Trap_4K.mp4 \
+              --repo "$GITHUB_REPOSITORY" --target cost-of-normal-publish-4k-fast \
+              --title 'Cost of Normal — Monthly Payment Trap — staging' \
+              --notes 'Temporary publication staging asset for the Cost of Normal production pipeline.'
+          fi
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/Cost_of_Normal_Monthly_Payment_Trap_4K.mp4"
+          echo "$URL" | tee stage/master_url.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cost-normal-master-staging-url
+          path: stage/master_url.txt
+          retention-days: 7
