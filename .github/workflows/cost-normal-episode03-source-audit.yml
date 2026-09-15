@@ -1,0 +1,84 @@
+name: Cost of Normal Episode 03 Source Audit
+on:
+  push:
+    branches: [cost-of-normal-publish-4k-fast]
+    paths: [.github/workflows/cost-normal-episode03-source-audit.yml]
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Install ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg imagemagick
+      - name: Download and ffprobe Episode 03 candidates
+        shell: bash
+        run: |
+          set -e
+          mkdir -p clips frames out
+          cat > candidates.txt <<'EOF'
+          3684251 road
+          36725562 road
+          3978444 road
+          29857932 road
+          4644521 road
+          15539299 road
+          8987066 repair
+          8986475 repair
+          8987457 repair
+          8987286 repair
+          33129049 repair
+          6870334 repair
+          6870346 repair
+          6870345 repair
+          14744294 weather
+          3588018 weather
+          9481659 weather
+          13710462 weather
+          32221425 weather
+          6031712 weather
+          12680280 weather
+          6637310 consumer
+          8052387 consumer
+          8052394 consumer
+          35684338 injury
+          5514366 injury
+          11701177 injury
+          25397940 theft
+          29019380 theft
+          13643106 theft
+          27807956 theft
+          9990894 theft
+          EOF
+          echo 'id,category,width,height,duration,bitrate,landscape,quality_tier' > out/audit.csv
+          : > out/admitted.txt
+          while read -r vid cat; do
+            if ! curl -fsSL --retry 3 -A 'Mozilla/5.0' "https://www.pexels.com/download/video/${vid}/" -o "clips/${vid}.mp4"; then
+              echo "$vid,$cat,0,0,0,0,false,download_failed" >> out/audit.csv; continue
+            fi
+            W=$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 "clips/${vid}.mp4" || echo 0)
+            H=$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "clips/${vid}.mp4" || echo 0)
+            DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "clips/${vid}.mp4" || echo 0)
+            BR=$(ffprobe -v error -show_entries format=bit_rate -of csv=p=0 "clips/${vid}.mp4" || echo 0)
+            LAND=false; TIER=reject
+            if [ "${W:-0}" -gt "${H:-0}" ]; then LAND=true; fi
+            if [ "$LAND" = true ] && [ "${W:-0}" -ge 3840 ] && [ "${H:-0}" -ge 1900 ]; then TIER=native4k;
+            elif [ "$LAND" = true ] && [ "${W:-0}" -ge 1920 ] && [ "${H:-0}" -ge 1080 ]; then TIER=sharp1080_candidate; fi
+            echo "$vid,$cat,$W,$H,$DUR,$BR,$LAND,$TIER" >> out/audit.csv
+            if [ "$TIER" != reject ]; then
+              echo "$vid $cat $W $H $DUR $TIER" >> out/admitted.txt
+              ffmpeg -hide_banner -loglevel error -y -ss 2 -i "clips/${vid}.mp4" -frames:v 1 -vf 'scale=640:-2' "frames/${vid}_${cat}.jpg" || true
+            fi
+          done < candidates.txt
+          TOTAL=$(wc -l < out/admitted.txt | tr -d ' ')
+          N4K=$(grep -c 'native4k' out/admitted.txt || true)
+          echo "admitted_landscape_hd_or_better=$TOTAL" | tee out/summary.txt
+          echo "native4k=$N4K" | tee -a out/summary.txt
+          for c in road repair weather consumer injury theft; do echo "$c=$(grep -c " $c " out/admitted.txt || true)" | tee -a out/summary.txt; done
+          if ls frames/*.jpg >/dev/null 2>&1; then montage frames/*.jpg -thumbnail 640x360 -tile 4x -geometry +6+6 out/contact.jpg; fi
+          test "$TOTAL" -ge 20
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cost-normal-episode03-source-audit
+          path: out/
+          retention-days: 7
