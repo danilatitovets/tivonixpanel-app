@@ -56,15 +56,18 @@ jobs:
           pools={k:[pid for pid in vals if pid in infos] for k,vals in M['sources'].items()}; pools['data']=pools['dealer']+pools['budget']; pools['credit']=pools['budget']+pools['dealer']
           for k,v in pools.items():
               if not v: raise RuntimeError(f'Empty visual pool {k}')
+          MAX_REUSE=8
           usage={pid:0 for pid in infos}; recent=[]; specs=[]; cursor=0.0; scene_map=[]; hero_scenes={4,5,6,17,21,28}
           for scene,(a,kind) in enumerate(zip(audios,M['kinds']),1):
               remain=adur(a); start_scene=cursor; shot=0; pool=pools[kind]
               while remain>0.035:
                   target=3.0 if cursor<35 else 3.8
                   if scene in hero_scenes and shot==0: target=min(5.5,remain)
-                  candidates=[pid for pid in pool if pid not in recent[-10:]]
-                  if not candidates: candidates=[pid for pid in pool if pid not in recent[-4:]]
-                  if not candidates: candidates=list(pool)
+                  eligible=[pid for pid in pool if usage[pid] < MAX_REUSE]
+                  if not eligible: raise RuntimeError(f'Semantic pool exhausted at hard reuse cap {MAX_REUSE}: scene={scene} kind={kind} usage={usage}')
+                  candidates=[pid for pid in eligible if pid not in recent[-10:]]
+                  if not candidates: candidates=[pid for pid in eligible if pid not in recent[-4:]]
+                  if not candidates: candidates=list(eligible)
                   candidates.sort(key=lambda pid:(usage[pid], -infos[pid]['bitrate'], -infos[pid]['dur']))
                   pid=candidates[0]; vi=infos[pid]; sd=min(target,remain,max(0.7,vi['dur']-0.12)); maxstart=max(0.0,vi['dur']-sd-0.06)
                   ss=0.0 if maxstart<=0 else (scene*2.17+usage[pid]*7.31+shot*3.07)%maxstart
@@ -95,7 +98,7 @@ jobs:
           set -euo pipefail
           M=work/output/Cost_of_Normal_Monthly_Payment_Trap_FINAL_NATIVE4K.mp4
           ffprobe -v error -show_entries format=duration,size,bit_rate -show_entries stream=codec_type,codec_name,width,height,r_frame_rate -of json "$M" | tee work/qa/probe.json
-          for t in 5 20 45 75 120 180 270 360 450 520; do ffmpeg -hide_banner -loglevel error -y -ss "$t" -i "$M" -frames:v 1 -q:v 2 "work/qa/frames/${t}.jpg"; done
+          for t in 5 20 45 70 75 120 135 180 205 270 345 360 415 450 485 520 535 540; do ffmpeg -hide_banner -loglevel error -y -ss "$t" -i "$M" -frames:v 1 -q:v 2 "work/qa/frames/${t}.jpg"; done
           ffmpeg -hide_banner -i "$M" -vf blackdetect=d=0.5:pix_th=0.05 -an -f null - 2> work/qa/blackdetect.txt || true
           if grep -q 'black_duration:' work/qa/blackdetect.txt; then cat work/qa/blackdetect.txt; exit 1; fi
           python3 - <<'PY'
@@ -103,8 +106,9 @@ jobs:
           x=json.load(open('work/qa/source_info.json')); bad={k:v for k,v in x.items() if not(v['w']>=3840 and v['h']>=2160)}
           if bad: raise SystemExit(f'Native-4K gate failed: {bad}')
           u=json.load(open('work/qa/usage.json')); used=[k for k,v in u.items() if v>0]
-          if len(used)<18: raise SystemExit(f'Visual variety gate failed: {len(used)} unique sources')
-          open('work/qa/final_gate.txt','w').write(f'PUBLISH_APPROVED_NATIVE4K_PENDING_VISUAL_REVIEW\nunique_sources={len(used)}\nall_sources_native4k=true\n')
+          if len(used)<20: raise SystemExit(f'Visual variety gate failed: {len(used)} unique sources')
+          if max(u.values())>8: raise SystemExit(f'Global source reuse gate failed: max={max(u.values())}')
+          open('work/qa/final_gate.txt','w').write(f'PUBLISH_APPROVED_NATIVE4K_PENDING_VISUAL_REVIEW\nunique_sources={len(used)}\nmax_source_reuse={max(u.values())}\nall_sources_native4k=true\n')
           PY
       - name: Upload final review and QA
         uses: actions/upload-artifact@v4
